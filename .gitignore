@@ -1,3 +1,10 @@
+artifacts/functions/
+frontend/node_modules/
+frontend/build/
+frontend/public/aws-exports.json
+sync.sh
+
+
 # Logs
 logs
 *.log
