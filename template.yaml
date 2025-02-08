@@ -1,0 +1,974 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template'
+
+Parameters:
+  Username:
+      Type: String
+      Description: Username (email)
+      AllowedPattern: "\\w[-\\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\\.)+[A-Za-z]{2,14}"
+      Default: "snmatus@amazon.com"
+
+  S3Artifacts:
+      Type: String
+      Description: S3 Artifacts
+  
+  DSQLCluster:
+      Type: String
+      Description: DSQLCluster
+
+  
+
+
+######################################################################
+########
+########   -----------------          Frontend      -----------------
+########
+######################################################################
+
+Resources:
+
+  S3BucketFrontendApp:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "mtdt-mng-s3-application"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - NoncurrentVersionTransitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+            Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true      
+      VersioningConfiguration:
+        Status: Enabled    
+   
+  S3BucketPolicyFrontendApp:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketFrontendApp
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+            Effect: Deny
+            Principal:
+              AWS: '*'
+            Resource:
+              - !GetAtt S3BucketFrontendApp.Arn
+              - !Join
+                - ''
+                - - !GetAtt S3BucketFrontendApp.Arn
+                  - /*
+          - Action: s3:GetObject
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Join
+                  - ''
+                  - - 'arn:aws:cloudfront::'
+                    - !Ref AWS::AccountId
+                    - ':distribution/'
+                    - !Ref CloudFrontDistributionApp
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Resource: !Join
+              - ''
+              - - !GetAtt S3BucketFrontendApp.Arn
+                - /*
+        Version: '2012-10-17'
+   
+   
+
+  CloudFrontDistributionApp:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: 10
+            ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /
+        DefaultCacheBehavior:
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          Compress: true
+          FunctionAssociations:
+            - EventType: viewer-response
+              FunctionARN: !GetAtt CloudFrontSecurityFunction.FunctionARN
+          TargetOriginId: MetadaManagementFrontendStackCfToS3CloudFrontDistributionOrigin10A313BD7
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: true
+        Origins:
+          - DomainName: !GetAtt S3BucketFrontendApp.RegionalDomainName
+            Id: MetadaManagementFrontendStackCfToS3CloudFrontDistributionOrigin10A313BD7
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccess.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+    
+
+  CloudFrontOriginAccess:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Description: Origin access control provisioned by aws-cloudfront-s3
+        Name: "mtdt_mng_cloudfront_origin_access"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+
+  CloudFrontSecurityFunction:    
+    DependsOn:
+          - "ApiGatewayRestApi"
+    Type: AWS::CloudFront::Function
+    Properties:
+      AutoPublish: true
+      FunctionCode: !Join
+        - ''
+        - - |-
+            function handler(event) {
+                  var response = event.response;
+                  var headers = response.headers;
+                  // Set HTTP security headers
+                  // Since JavaScript doesn't allow for hyphens in variable names, we use the dict["key"] notation
+                  headers['strict-transport-security'] = { value: 'max-age=63072000; includeSubdomains; preload'};
+                  headers['content-security-policy'] = { value: "default-src 'self' https://cognito-identity.
+          - !Ref AWS::Region
+          - '.amazonaws.com '                
+          - https://
+          - !Ref ApiGatewayRestApi
+          - '.execute-api.'
+          - !Ref AWS::Region
+          - '.amazonaws.com/v1/ '
+          - |2-
+             img-src 'self' data:;font-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'"};
+                  headers['x-content-type-options'] = { value: 'nosniff'};
+                  headers['x-frame-options'] = {value: 'DENY'};
+                  headers['x-xss-protection'] = {value: '1; mode=block'};
+                  // Return the response to viewers
+                  return response;
+                }
+      FunctionConfig:
+        Comment: !Join
+          - ''
+          - - !Ref AWS::Region
+            - MetadaManagementFrontendStackSecurityHeadersC0CA0196
+        Runtime: cloudfront-js-1.0
+      Name: !Join [ "_", ["cloudfront_function_metadata_management_solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+
+#!Sub "https://\${MyApiGateway}.execute-api.\${AWS::Region}.amazonaws.com/prod/
+#https://\${ApiGatewayRestApi}.execute-api.\${AWS::Region}.amazonaws.com/v1/
+
+
+######################################################################
+########
+########   -----------------          Security      -----------------
+########
+######################################################################
+
+  IAMRoleCognito:
+      Type: "AWS::IAM::Role"
+      Properties:
+          Path: "/"
+          RoleName: "mtdt-mng-role-coginito"
+          AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cognito-idp.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+          MaxSessionDuration: 3600
+          Description: "Allows Cognito to use SMS MFA on your behalf."
+          Policies:
+          - PolicyName: "CognitoPolicy"
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement: 
+                - Effect: "Allow"
+                  Action:
+                    - "sns:publish"
+                  Resource: "*"
+
+
+  CognitoUserPool:
+      Type: "AWS::Cognito::UserPool"
+      Properties:
+          UserPoolName: "mtdt-mng-user-pool-cognito"           
+          Policies: 
+              PasswordPolicy: 
+                  MinimumLength: 8
+                  RequireUppercase: true
+                  RequireLowercase: true
+                  RequireNumbers: true
+                  RequireSymbols: true
+                  TemporaryPasswordValidityDays: 7
+          LambdaConfig: {}
+          AutoVerifiedAttributes: 
+            - "email"
+          UsernameAttributes: 
+            - "email"
+          MfaConfiguration: "OPTIONAL"
+          SmsConfiguration: 
+              SnsCallerArn: !GetAtt IAMRoleCognito.Arn 
+              SnsRegion: !Ref AWS::Region
+          EmailConfiguration: 
+              EmailSendingAccount: "COGNITO_DEFAULT"
+          AdminCreateUserConfig: 
+              AllowAdminCreateUserOnly: true
+          UserPoolTags: {}
+          AccountRecoverySetting: 
+              RecoveryMechanisms: 
+                - 
+                  Priority: 1
+                  Name: "verified_email"
+          UsernameConfiguration: 
+              CaseSensitive: false
+          VerificationMessageTemplate: 
+              DefaultEmailOption: "CONFIRM_WITH_CODE"
+
+  CognitoUserPoolClient:
+      Type: "AWS::Cognito::UserPoolClient"
+      Properties:
+          UserPoolId: !Ref CognitoUserPool
+          ClientName: "mtdt-mng-user-pool-client-cognito"                    
+          RefreshTokenValidity: 1
+          ReadAttributes: 
+            - "address"
+            - "birthdate"
+            - "email"
+            - "email_verified"
+            - "family_name"
+            - "gender"
+            - "given_name"
+            - "locale"
+            - "middle_name"
+            - "name"
+            - "nickname"
+            - "phone_number"
+            - "phone_number_verified"
+            - "picture"
+            - "preferred_username"
+            - "profile"
+            - "updated_at"
+            - "website"
+            - "zoneinfo"
+          WriteAttributes: 
+            - "address"
+            - "birthdate"
+            - "email"
+            - "family_name"
+            - "gender"
+            - "given_name"
+            - "locale"
+            - "middle_name"
+            - "name"
+            - "nickname"
+            - "phone_number"
+            - "picture"
+            - "preferred_username"
+            - "profile"
+            - "updated_at"
+            - "website"
+            - "zoneinfo"
+          ExplicitAuthFlows: 
+            - "ALLOW_REFRESH_TOKEN_AUTH"
+            - "ALLOW_USER_SRP_AUTH"
+          PreventUserExistenceErrors: "ENABLED"
+          AllowedOAuthFlowsUserPoolClient: false
+          IdTokenValidity: 1440
+          AccessTokenValidity: 1440
+          TokenValidityUnits: 
+              AccessToken: "minutes"
+              IdToken: "minutes"
+              RefreshToken: "days"
+
+  CognitoUserPoolUser:
+      Type: "AWS::Cognito::UserPoolUser"
+      Properties:
+          Username: !Ref Username
+          UserPoolId: !Ref CognitoUserPool
+          UserAttributes: 
+            - 
+              Name: "email_verified"
+              Value: "true"
+            - 
+              Name: "email"
+              Value: !Ref Username
+
+######################################################################
+########
+########   -----------------          Backend        -----------------
+########
+######################################################################
+
+
+  ApiGatewayRestApi:
+      Type: "AWS::ApiGateway::RestApi"
+      Properties:
+          Name: "mtdt-mng-api-gateway"
+          ApiKeySourceType: "HEADER"
+          EndpointConfiguration: 
+              Types: 
+                - "REGIONAL"
+  
+  ApiGatewayDeployment:
+      DependsOn:
+        - "ApiGatewayMethod"
+        - "ApiGatewayMethod2"
+      Type: "AWS::ApiGateway::Deployment"
+      Properties:
+          RestApiId: !Ref ApiGatewayRestApi
+
+  ApiGatewayStage:
+      Type: "AWS::ApiGateway::Stage"
+      Properties:
+          StageName: "v1"            
+          RestApiId: !Ref ApiGatewayRestApi
+          CacheClusterEnabled: false
+          TracingEnabled: false
+          DeploymentId: !Ref ApiGatewayDeployment
+
+  ApiGatewayMethod:
+      Type: "AWS::ApiGateway::Method"
+      Properties:
+          RestApiId: !Ref ApiGatewayRestApi
+          ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId 
+          HttpMethod: "POST"
+          AuthorizationType: "COGNITO_USER_POOLS"
+          AuthorizerId: !Ref ApiGatewayAuthorizer
+          ApiKeyRequired: false
+          MethodResponses: 
+            - 
+              ResponseModels: 
+                  "application/json": "Empty"
+              StatusCode: "200"
+          Integration: 
+              CacheNamespace: !GetAtt ApiGatewayRestApi.RootResourceId 
+              ContentHandling: "CONVERT_TO_TEXT"
+              IntegrationHttpMethod: "POST"
+              IntegrationResponses: 
+                - 
+                  ResponseTemplates: {}
+                  StatusCode: "200"
+              PassthroughBehavior: "WHEN_NO_MATCH"
+              TimeoutInMillis: 29000
+              Type: "AWS_PROXY"
+              Uri : 
+                !Join
+                  - ''
+                  - - 'arn:aws:apigateway:'                      
+                    - !Ref AWS::Region
+                    - ":lambda:path/2015-03-31/functions/arn:aws:lambda:"
+                    - !Ref AWS::Region
+                    - ":"
+                    - !Ref AWS::AccountId
+                    - ":function:"
+                    - "mtdt-mng-lambda-api"
+                    - "/invocations"
+
+
+  ApiGatewayMethod2:
+      Type: "AWS::ApiGateway::Method"
+      Properties:
+          RestApiId: !Ref ApiGatewayRestApi
+          ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId 
+          HttpMethod: "OPTIONS"
+          AuthorizationType: "NONE"
+          ApiKeyRequired: false
+          RequestParameters: {}
+          MethodResponses: 
+            - 
+              ResponseModels: 
+                  "application/json": "Empty"
+              ResponseParameters: 
+                  "method.response.header.Access-Control-Allow-Headers": false
+                  "method.response.header.Access-Control-Allow-Methods": false
+                  "method.response.header.Access-Control-Allow-Origin": false
+              StatusCode: "200"
+          Integration: 
+              CacheNamespace: !GetAtt ApiGatewayRestApi.RootResourceId 
+              IntegrationResponses: 
+                - 
+                  ResponseParameters: 
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Access-Control-Allow-Headers,Access-Control-Allow-Origin'"
+                      "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS,POST'"
+                      "method.response.header.Access-Control-Allow-Origin": "'*'"                        
+                  StatusCode: "200"
+              PassthroughBehavior: "WHEN_NO_MATCH"
+              RequestTemplates: 
+                  "application/json": "{\"statusCode\": 200}"
+              TimeoutInMillis: 29000
+              Type: "MOCK"
+
+  ApiGatewayAuthorizer:
+      DependsOn:
+          - "CognitoUserPool"
+      Type: "AWS::ApiGateway::Authorizer"
+      Properties:
+          RestApiId: !Ref ApiGatewayRestApi
+          Name: "CognitoAutorizer"
+          Type: "COGNITO_USER_POOLS"
+          ProviderARNs: 
+            - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AWS::Region}_${CognitoUserPool.UserPoolId}"
+          AuthType: "cognito_user_pools"
+          IdentitySource: "method.request.header.Authorization"
+
+  
+  S3PluginBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:          
+          BucketName: "mtdt-mng-s3-libraries"
+          BucketEncryption: 
+              ServerSideEncryptionConfiguration: 
+                - 
+                  ServerSideEncryptionByDefault: 
+                      SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: true
+          OwnershipControls: 
+              Rules: 
+                - 
+                  ObjectOwnership: "BucketOwnerEnforced"
+          PublicAccessBlockConfiguration: 
+              BlockPublicAcls: true
+              BlockPublicPolicy: true
+              IgnorePublicAcls: true
+              RestrictPublicBuckets: true
+
+
+
+  ApiLambdaPermission:
+      DependsOn:
+        - "LambdaFunctionApi"
+      Type: AWS::Lambda::Permission
+      DependsOn: 
+        - ApiGatewayRestApi
+        - LambdaFunctionApi
+      Properties:
+        Action: "lambda:InvokeFunction"
+        FunctionName: "mtdt-mng-lambda-api"
+        Principal: "apigateway.amazonaws.com"
+        SourceArn: 
+          !Join
+            - ''
+            - - 'arn:aws:execute-api'
+              - ":"
+              - !Ref AWS::Region
+              - ":"
+              - !Ref AWS::AccountId
+              - ":"
+              - !GetAtt ApiGatewayRestApi.RestApiId
+              - "/*/POST/"
+              
+  IAMRoleLambdaApi:
+      Type: "AWS::IAM::Role"
+      Properties:
+          Path: "/"
+          RoleName: "mtdt-mng-iam-role-lambda-api"
+          AssumeRolePolicyDocument: !Sub |
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                },
+                                "Action": "sts:AssumeRole"
+                            }
+                        ]
+                    }
+          Policies:
+          - PolicyName: "LambdaPolicy"
+            PolicyDocument: !Sub |              
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "logs:CreateLogGroup"
+                            ],
+                            "Resource": "arn:aws:logs:us-east-1:039783469744:*",
+                            "Effect": "Allow"
+                        },
+                        {
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-api:*",
+                            "Effect": "Allow"
+                        },                      
+                        {
+                            "Sid": "Statement1",
+                            "Effect": "Allow",
+                            "Action": [
+                                "dsql:DbConnectAdmin"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement2",
+                            "Effect": "Allow",
+                            "Action": [
+                                "lambda:InvokeFunction"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:us-east-1:039783469744:function:mtdt-mng-lambda-discovery"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement3",
+                            "Effect": "Allow",
+                            "Action": [
+                                "lambda:InvokeFunction"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:us-east-1:039783469744:function:mtdt-mng-lambda-tagger"
+                            ]
+                        }
+                    ]
+                }    
+            
+
+
+  IAMRoleLambdaDiscovery:
+      Type: "AWS::IAM::Role"
+      Properties:
+          Path: "/"
+          RoleName: "mtdt-mng-iam-role-lambda-discovery"
+          AssumeRolePolicyDocument: !Sub |
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                },
+                                "Action": "sts:AssumeRole"
+                            }
+                        ]
+                    }
+          Policies:
+          - PolicyName: "LambdaPolicy"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "logs:CreateLogGroup",
+                            "Resource": "arn:aws:logs:us-east-1:039783469744:*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [
+                                "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-discovery:*"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement1",
+                            "Effect": "Allow",
+                            "Action": [
+                                "dsql:DbConnectAdmin"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement2",
+                            "Effect": "Allow",
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement3",
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Sid": "Statement4",
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:PutObject"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ]
+                }           
+
+
+  IAMRoleLambdaTagger:
+      Type: "AWS::IAM::Role"
+      Properties:
+          Path: "/"
+          RoleName: "mtdt-mng-iam-role-lambda-tagger"
+          AssumeRolePolicyDocument: !Sub |
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "lambda.amazonaws.com"
+                                },
+                                "Action": "sts:AssumeRole"
+                            }
+                        ]
+                    }
+          Policies:
+          - PolicyName: "LambdaPolicy"
+            PolicyDocument: !Sub |              
+                   {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                          {
+                              "Effect": "Allow",
+                              "Action": "logs:CreateLogGroup",
+                              "Resource": "arn:aws:logs:us-east-1:039783469744:*"
+                          },
+                          {
+                              "Effect": "Allow",
+                              "Action": [
+                                  "logs:CreateLogStream",
+                                  "logs:PutLogEvents"
+                              ],
+                              "Resource": [
+                                  "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-tagger:*"
+                              ]
+                          },
+                          {
+                              "Sid": "Statement2",
+                              "Effect": "Allow",
+                              "Action": [
+                                  "sts:AssumeRole"
+                              ],
+                              "Resource": [
+                                  "*"
+                              ]
+                          },
+                          {
+                              "Sid": "Statement3",
+                              "Effect": "Allow",
+                              "Action": [
+                                  "dsql:DbConnectAdmin"
+                              ],
+                              "Resource": [
+                                  "*"
+                              ]
+                          },
+                          {
+                              "Sid": "Statement4",
+                              "Effect": "Allow",
+                              "Action": [
+                                  "s3:GetObject"
+                              ],
+                              "Resource": [
+                                  "*"
+                              ]
+                          }
+                      ]
+                    }
+
+
+  LambdaFunctionApi:
+    Type: AWS::Lambda::Function
+    Properties:        
+      Environment: 
+          Variables:                          
+              DBHOST: !Ref DSQLCluster
+              DBNAME: "postgres"
+              DBPORT: "5432"
+              DBUSER: "admin"
+              LAMBDA_METADATA_DISCOVERY: !Ref LambdaFunctionDiscovery
+              LAMBDA_METADATA_TAGGING: !Ref LambdaFunctionTagger
+              REGION: !Ref AWS::Region
+
+      FunctionName: "mtdt-mng-lambda-api"
+      Handler: "lambda_function.lambda_handler"
+      Architectures: 
+        - "x86_64"
+      MemorySize: 128      
+      Role: !GetAtt IAMRoleLambdaApi.Arn
+      Runtime: "python3.11"
+      Timeout: 900
+      TracingConfig: 
+          Mode: "PassThrough"
+      EphemeralStorage: 
+          Size: 512
+      Layers:
+        - !Ref LambdaLayer        
+      Code:
+        S3Bucket: !Ref S3Artifacts
+        S3Key: "functions/lambda.api.zip"
+
+
+  LambdaFunctionDiscovery:
+    Type: AWS::Lambda::Function
+    Properties:        
+      Environment: 
+          Variables:                          
+              DBHOST: !Ref DSQLCluster
+              DBNAME: "postgres"
+              DBPORT: "5432"
+              DBUSER: "admin"
+              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              MAX_WORKERS : "10"
+              S3_BUCKET_METADATA : !Ref S3PluginBucket
+              S3_BUCKET_MODULES : !Ref S3PluginBucket
+              REGION: !Ref AWS::Region
+
+      FunctionName: "mtdt-mng-lambda-discovery"
+      Handler: "lambda_function.lambda_handler"
+      Architectures: 
+        - "x86_64"
+      MemorySize: 128      
+      Role: !GetAtt IAMRoleLambdaDiscovery.Arn
+      Runtime: "python3.11"
+      Timeout: 900
+      TracingConfig: 
+          Mode: "PassThrough"
+      EphemeralStorage: 
+          Size: 512
+      Layers:
+        - !Ref LambdaLayer        
+      Code:
+        S3Bucket: !Ref S3Artifacts
+        S3Key: "functions/lambda.discovery.zip"
+
+
+  LambdaFunctionTagger:
+    Type: AWS::Lambda::Function
+    Properties:        
+      Environment: 
+          Variables:                          
+              DBHOST: !Ref DSQLCluster
+              DBNAME: "postgres"
+              DBPORT: "5432"
+              DBUSER: "admin"
+              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              MAX_WORKERS : "10"
+              S3_BUCKET_METADATA : !Ref S3PluginBucket
+              S3_BUCKET_MODULES : !Ref S3PluginBucket
+              REGION: !Ref AWS::Region
+
+      FunctionName: "mtdt-mng-lambda-tagger"
+      Handler: "lambda_function.lambda_handler"
+      Architectures: 
+        - "x86_64"
+      MemorySize: 128      
+      Role: !GetAtt IAMRoleLambdaTagger.Arn
+      Runtime: "python3.11"
+      Timeout: 900
+      TracingConfig: 
+          Mode: "PassThrough"
+      EphemeralStorage: 
+          Size: 512
+      Layers:
+        - !Ref LambdaLayer        
+      Code:
+        S3Bucket: !Ref S3Artifacts
+        S3Key: "functions/lambda.tagger.zip"
+
+
+
+  LambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: "mtdt-mng-lambda-layer"
+      Description: psycopg2, boto3 libraries
+      Content:
+        S3Bucket: !Ref S3Artifacts
+        S3Key: "layers/lambda.layer.zip"
+      CompatibleRuntimes:
+        - python3.11
+      LicenseInfo: MIT        
+
+
+
+######################################################################
+########
+########   -----------------    IAM REMOTE ROLES    -----------------
+########
+######################################################################
+
+
+  IAMPolicyTaggerSolution:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+          ManagedPolicyName: !Join [ "-", ["policy-tagger-process-solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          PolicyDocument: !Sub |
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                      "apigateway:GET",
+                      "apigateway:PATCH",
+                      "apigateway:PUT",
+                      "apigateway:DELETE",
+                      "apigateway:POST",
+                      "backup:ListBackupVaults",
+                      "backup:ListBackupPlans",
+                      "backup:ListTags",
+                      "backup:TagResource",
+                      "dynamodb:ListTables",
+                      "dynamodb:Describe*",
+                      "dynamodb:TagResource",
+                      "dynamodb:ListTagsOfResource",
+                      "ec2:Describe*",
+                      "ec2:CreateTags",
+                      "ec2:DeleteTags",
+                      "ec2:DescribeVolumes",
+                      "ec2:DescribeSnapshots",
+                      "ec2:DescribeTransitGateways",
+                      "ec2:DescribeTransitGatewayAttachments",
+                      "ec2:DescribeTags",
+                      "ec2:CreateTags",
+                      "ecr:DescribeRepositories",
+                      "ecr:ListTagsForResource",
+                      "ecr:TagResource",
+                      "ecs:ListClusters",
+                      "ecs:DescribeClusters",
+                      "ecs:ListTagsForResource",
+                      "ecs:TagResource",
+                      "eks:ListClusters",
+                      "eks:ListTagsForResource",
+                      "eks:TagResource",
+                      "elasticfilesystem:Describe*",
+                      "elasticfilesystem:CreateTags",
+                      "elasticfilesystem:ListTagsForResource",
+                      "elasticloadbalancing:AddTags",
+                      "elasticloadbalancing:Describe*",
+                      "elasticmapreduce:DescribeCluster",
+                      "elasticmapreduce:ListClusters",
+                      "elasticmapreduce:AddTags",
+                      "fsx:TagResource",
+                      "fsx:DescribeFileSystems",
+                      "fsx:ListTagsForResource",
+                      "fsx:DescribeBackups",
+                      "lambda:List*",
+                      "lambda:Get*",
+                      "lambda:TagResource",
+                      "logs:CreateLogGroup",
+                      "logs:CreateLogStream",
+                      "logs:PutLogEvents",
+                      "logs:DescribeLogGroups",
+                      "logs:DescribeLogStreams",
+                      "redshift:CreateTags",
+                      "redshift:Describe*",
+                      "rds:ListTagsForResource",
+                      "rds:Describe*",
+                      "rds:DescribeDBInstances",
+                      "rds:AddTagsToResource",
+                      "s3:Get*",
+                      "s3:List*",
+                      "s3:PutBucketTagging",
+                      "tag:Get*",
+                      "tag:TagResources",
+                      "transfer:ListServers",
+                      "transfer:ListTagsForResource",
+                      "transfer:TagResource",
+                      "workspaces:DescribeWorkspaces",
+                      "workspaces:CreateTags",
+                      "rds:RemoveTagsFromResource",
+                      "elasticloadbalancing:RemoveTags",
+                      "elasticfilesystem:DeleteTags",
+                      "fsx:UntagResource",
+                      "dynamodb:UntagResource",
+                      "lambda:UntagResource",
+                      "backup:UntagResource",
+                      "ecr:UntagResource",
+                      "eks:UntagResource",
+                      "eks:DescribeCluster",
+                      "ecs:UntagResource",
+                      "elasticmapreduce:RemoveTags",
+                      "transfer:DescribeServer",
+                      "transfer:UntagResource"
+                    ],
+                    "Resource": "*"
+                  }
+                ]
+              }
+              
+  IAMRoleTaggerSolution:
+      Type: "AWS::IAM::Role"
+      DependsOn: IAMRoleLambdaApi
+      Properties:
+          Path: "/"
+          RoleName: "IAMRoleTaggerSolution"
+          AssumeRolePolicyDocument: !Sub |
+              {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                          "Effect": "Allow",
+                          "Principal": {
+                              "AWS": "${IAMRoleLambdaApi.Arn}"
+                          },
+                          "Action": "sts:AssumeRole"
+                      }
+                  ]
+              }
+          MaxSessionDuration: 3600
+          ManagedPolicyArns:
+              - !Ref IAMPolicyTaggerSolution
+    
+        
+
+
+
+######################################################################
+########
+########   -----------------          OUTPUT        -----------------
+########
+######################################################################
+
+
+Outputs:
+    PublicAppURL:
+        Description: CloudFront Public Endpoint
+        Value: !Join [ "", ["https://", !GetAtt CloudFrontDistributionApp.DomainName]]
+
+    CognitoUserPool:
+        Description: Cognito User Pool
+        Value: !GetAtt CognitoUserPool.UserPoolId
+
+    CognitoUserPoolClient:
+        Description: Cognito User Pool
+        Value: !GetAtt CognitoUserPoolClient.ClientId
+    
+    IAMRoleTaggerSolution:
+        Description: IAMRoleTaggerSolution
+        Value: !GetAtt IAMRoleTaggerSolution.Arn
+
+    S3BucketFrontendApp:
+        Description: S3BucketFrontendApp
+        Value: !Ref S3BucketFrontendApp
+
+
