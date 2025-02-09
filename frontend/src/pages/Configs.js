@@ -1,9 +1,10 @@
+import { api } from './Api';
+
 export const configuration = 
 {
     "apps-settings": {
         "refresh-interval": 5*1000,      
-        "api-url2" : "https://175zjwq9g3.execute-api.us-east-1.amazonaws.com/v1",  
-        "api-url": "https://9okke9lkil.execute-api.us-east-1.amazonaws.com/v1",
+        "api-url" : api["url"],          
         "release" : "0.1.0",
         "application-title": "Metadata Management Solution",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",

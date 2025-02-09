@@ -29,8 +29,10 @@ Resources:
 
   S3BucketFrontendApp:
     Type: AWS::S3::Bucket
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
     Properties:
-      BucketName: "mtdt-mng-s3-application"
+      BucketName: !Join [ "-", ["mtdt-mng-s3-application", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -86,8 +88,7 @@ Resources:
                 - /*
         Version: '2012-10-17'
    
-   
-
+ 
   CloudFrontDistributionApp:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -307,6 +308,28 @@ Resources:
 ########
 ######################################################################
 
+  
+  S3PluginBucket:
+      Type: "AWS::S3::Bucket"
+      UpdateReplacePolicy: Retain
+      DeletionPolicy: Retain
+      Properties:          
+          BucketName: !Join [ "-", ["mtdt-mng-s3-libraries", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          BucketEncryption: 
+              ServerSideEncryptionConfiguration: 
+                - 
+                  ServerSideEncryptionByDefault: 
+                      SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: true
+          OwnershipControls: 
+              Rules: 
+                - 
+                  ObjectOwnership: "BucketOwnerEnforced"
+          PublicAccessBlockConfiguration: 
+              BlockPublicAcls: true
+              BlockPublicPolicy: true
+              IgnorePublicAcls: true
+              RestrictPublicBuckets: true
 
   ApiGatewayRestApi:
       Type: "AWS::ApiGateway::RestApi"
@@ -418,28 +441,6 @@ Resources:
             - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${AWS::Region}_${CognitoUserPool.UserPoolId}"
           AuthType: "cognito_user_pools"
           IdentitySource: "method.request.header.Authorization"
-
-  
-  S3PluginBucket:
-      Type: "AWS::S3::Bucket"
-      Properties:          
-          BucketName: "mtdt-mng-s3-libraries"
-          BucketEncryption: 
-              ServerSideEncryptionConfiguration: 
-                - 
-                  ServerSideEncryptionByDefault: 
-                      SSEAlgorithm: "AES256"
-                  BucketKeyEnabled: true
-          OwnershipControls: 
-              Rules: 
-                - 
-                  ObjectOwnership: "BucketOwnerEnforced"
-          PublicAccessBlockConfiguration: 
-              BlockPublicAcls: true
-              BlockPublicPolicy: true
-              IgnorePublicAcls: true
-              RestrictPublicBuckets: true
-
 
 
   ApiLambdaPermission:
@@ -602,16 +603,8 @@ Resources:
                             "Sid": "Statement3",
                             "Effect": "Allow",
                             "Action": [
-                                "s3:GetObject"
-                            ],
-                            "Resource": [
-                                "*"
-                            ]
-                        },
-                        {
-                            "Sid": "Statement4",
-                            "Effect": "Allow",
-                            "Action": [
+                                "s3:GetObject",
+                                "s3:ListBucket",
                                 "s3:PutObject"
                             ],
                             "Resource": [
@@ -685,7 +678,9 @@ Resources:
                               "Sid": "Statement4",
                               "Effect": "Allow",
                               "Action": [
-                                  "s3:GetObject"
+                                        "s3:GetObject",
+                                        "s3:ListBucket",
+                                        "s3:PutObject"
                               ],
                               "Resource": [
                                   "*"
@@ -712,7 +707,7 @@ Resources:
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
-      MemorySize: 128      
+      MemorySize: 1024      
       Role: !GetAtt IAMRoleLambdaApi.Arn
       Runtime: "python3.11"
       Timeout: 900
@@ -746,7 +741,7 @@ Resources:
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
-      MemorySize: 128      
+      MemorySize: 4096      
       Role: !GetAtt IAMRoleLambdaDiscovery.Arn
       Runtime: "python3.11"
       Timeout: 900
@@ -780,7 +775,7 @@ Resources:
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
-      MemorySize: 128      
+      MemorySize: 4096      
       Role: !GetAtt IAMRoleLambdaTagger.Arn
       Runtime: "python3.11"
       Timeout: 900
@@ -932,7 +927,21 @@ Resources:
                               "AWS": "${IAMRoleLambdaApi.Arn}"
                           },
                           "Action": "sts:AssumeRole"
-                      }
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Principal": {
+                              "AWS": "${IAMRoleLambdaDiscovery.Arn}"
+                          },
+                          "Action": "sts:AssumeRole"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Principal": {
+                              "AWS": "${IAMRoleLambdaTagger.Arn}"
+                          },
+                          "Action": "sts:AssumeRole"
+                      },
                   ]
               }
           MaxSessionDuration: 3600
@@ -955,6 +964,10 @@ Outputs:
         Description: CloudFront Public Endpoint
         Value: !Join [ "", ["https://", !GetAtt CloudFrontDistributionApp.DomainName]]
 
+    ApiURL:
+        Description: CloudFront Public Endpoint
+        Value: !Join [ "", ["https://", !Ref ApiGatewayRestApi, ".execute-api.",!Ref AWS::Region,".amazonaws.com/v1/"]]
+
     CognitoUserPool:
         Description: Cognito User Pool
         Value: !GetAtt CognitoUserPool.UserPoolId
@@ -971,4 +984,7 @@ Outputs:
         Description: S3BucketFrontendApp
         Value: !Ref S3BucketFrontendApp
 
+    S3PluginBucket:
+        Description: S3PluginBucket
+        Value: !Ref S3PluginBucket
 
