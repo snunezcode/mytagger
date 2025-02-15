@@ -534,6 +534,17 @@ Resources:
                             "Resource": [
                                 "arn:aws:lambda:us-east-1:039783469744:function:mtdt-mng-lambda-tagger"
                             ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:ListBucket",
+                                "s3:PutObject"
+                            ],
+                            "Resource": [                                
+                                "arn:aws:s3:::${S3PluginBucket}"
+                            ]
                         }
                     ]
                 }    
@@ -608,7 +619,7 @@ Resources:
                                 "s3:PutObject"
                             ],
                             "Resource": [
-                                "*"
+                                "arn:aws:s3:::${S3PluginBucket}"
                             ]
                         }
                     ]
@@ -683,7 +694,7 @@ Resources:
                                         "s3:PutObject"
                               ],
                               "Resource": [
-                                  "*"
+                                  "arn:aws:s3:::${S3PluginBucket}"
                               ]
                           }
                       ]
@@ -699,9 +710,12 @@ Resources:
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
+              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution              
               LAMBDA_METADATA_DISCOVERY: !Ref LambdaFunctionDiscovery
               LAMBDA_METADATA_TAGGING: !Ref LambdaFunctionTagger
+              MAX_WORKERS : "10"              
               REGION: !Ref AWS::Region
+              S3_BUCKET_MODULES : !Ref S3PluginBucket
 
       FunctionName: "mtdt-mng-lambda-api"
       Handler: "lambda_function.lambda_handler"
@@ -803,6 +817,13 @@ Resources:
         - python3.11
       LicenseInfo: MIT        
 
+
+  DBInit:
+    Type: Custom::DBInit
+    DependsOn: LambdaFunctionApi
+    Properties:
+      ServiceToken: !GetAtt LambdaFunctionApi.Arn
+      
 
 
 ######################################################################

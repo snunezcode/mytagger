@@ -6,6 +6,10 @@ import boto3
 from typing import TypedDict, Any
 import psycopg2
 from psycopg2 import pool
+import time
+import importlib.util
+import sys
+import concurrent.futures
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -269,6 +273,12 @@ REGION = os.environ['REGION']
 LAMBDA_METADATA_DISCOVERY = os.environ['LAMBDA_METADATA_DISCOVERY']
 
 LAMBDA_METADATA_TAGGING = os.environ['LAMBDA_METADATA_TAGGING']
+
+S3_BUCKET_MODULES = os.environ['S3_BUCKET_MODULES']
+
+IAM_SCAN_ROLE = os.environ['IAM_SCAN_ROLE']
+
+MAX_WORKERS = int(os.environ['MAX_WORKERS'])
 
 
 
@@ -1205,6 +1215,220 @@ def fn_16_delete_metadata_base(event: dict) -> APIGatewayResponse:
 
 
 
+###
+###-- List modules
+###
+
+def fn_17_get_list_modules_from_s3(event: dict) -> APIGatewayResponse:
+    try:
+        
+        s3 = boto3.client('s3',region_name=REGION)
+        response = s3.list_objects_v2(Bucket=S3_BUCKET_MODULES)
+    
+        modules = [
+            {
+                'name': item['Key'][:-3],
+                'size': item['Size'],
+                'lastModified': item['LastModified'].isoformat()
+            }
+            for item in response.get('Contents', [])
+            if item['Key'].endswith('.py') 
+        ]
+
+
+        return create_response(200, { 
+                                        "response" :  { "modules" : modules }
+                                    }
+        )
+       
+
+    except Exception as e:
+        logger.error(f"Error in 17-get-list-modules: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+
+
+###
+###-- Get Module content
+###
+
+def fn_18_get_module_content_from_s3(event: dict) -> APIGatewayResponse:
+    try:
+        
+        s3 = boto3.client('s3',region_name=REGION)    
+        response = s3.get_object(Bucket=S3_BUCKET_MODULES, Key=event['fileName']+ ".py")        
+        content = response['Body'].read().decode('utf-8')
+      
+        return create_response(200, { 
+                                        "response" :  { "content" : content }
+                                    }
+        )
+       
+
+    except Exception as e:
+        logger.error(f"Error in fn_18_get_module_content_from_s3: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+###
+###-- Save module content
+###
+
+def fn_19_save_module_content_to_s3(event: dict) -> APIGatewayResponse:
+    try:
+        
+        s3 = boto3.client('s3',region_name=REGION)
+    
+        s3.put_object(
+            Bucket=S3_BUCKET_MODULES,
+            Key=event['fileName'] + ".py",
+            Body=event['content'],
+            ContentType='text/plain'
+        )      
+        
+        return create_response(200, { 
+                                        "response" :  { "status" : "success" }
+                                    }
+        )
+       
+    except Exception as e:
+        logger.error(f"Error in fn_19_save_module_content_to_s3: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+###
+###-- Delete module content
+###
+
+def fn_20_delete_module_content_fom_s3(event: dict) -> APIGatewayResponse:
+    try:
+        s3 = boto3.client('s3',region_name=REGION)
+   
+        s3.delete_object(
+            Bucket=S3_BUCKET_MODULES,
+            Key=event['fileName'] + ".py"
+        )      
+
+        return create_response(200, { 
+                                        "response" :  { "status" : "success" }
+                                    }
+        )
+    except Exception as e:
+        logger.error(f"Error in fn_20_delete_module_content_fom_s3: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
+
+
+###
+###-- Validate module content
+###
+
+def fn_21_validate_module_content(event: dict) -> APIGatewayResponse:
+    try:
+        
+
+        account_id = event['accountId']
+        region = event['region']
+        file_name = event['fileName'] + ".py"
+        service = event['fileName']
+        
+        s3 = boto3.client('s3',region_name=REGION)    
+        response = s3.get_object(Bucket=S3_BUCKET_MODULES, Key=file_name)        
+        code = response['Body'].read().decode('utf-8')        
+        
+        #def assume_role(self, account_id):
+        sts_client = boto3.client('sts')
+        role_arn = f'arn:aws:iam::{account_id}:role/{IAM_SCAN_ROLE}'
+            
+        assumed_role = sts_client.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName=f'MultiAccountTagCollection-{account_id}'
+        )
+        
+        session = boto3.Session(
+            aws_access_key_id=assumed_role['Credentials']['AccessKeyId'],
+            aws_secret_access_key=assumed_role['Credentials']['SecretAccessKey'],
+            aws_session_token=assumed_role['Credentials']['SessionToken']
+        )    
+        
+
+        # Create a module name (can be any valid string)
+        module_name = "dynamic_module"
+
+        # Create a module spec
+        spec = importlib.util.spec_from_loader(module_name, loader=None)
+
+        # Create a module based on the spec
+        module = importlib.util.module_from_spec(spec)
+
+        # Add the module to sys.modules
+        sys.modules[module_name] = module
+
+        # Execute the code string in the module's namespace
+        exec(code, module.__dict__)
+
+        # Now you can use the imported code                
+        service_list = (module.get_service_types(None,None,None,None)).keys()        
+
+        
+        all_resources = [] 
+        all_services = [] 
+
+        # Parallel account and region processing
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            # Prepare futures for all accounts, regions, and services
+            futures = []                
+            for srv in service_list:                
+                futures.append(executor.submit(module.discovery, None, session, account_id, region, service, srv, logger))
+                    
+            
+            # Process results
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    service_name, status, message, resources = future.result()       
+                    resources = [{k: v for k, v in obj.items() if k not in ['metadata']} for obj in resources]    
+                    print(service_name, status, message)
+                    all_services.extend([{ "service" : service_name, "status" : status, "message"  : message }])                             
+                    all_resources.extend(resources)
+
+                except Exception as e:
+                    self.logger.error(f"Error processing future: {e}")          
+        
+        return create_response(200, { 
+                                        "response" :  { "status" : "success", "services" : all_services, "resources" :  json.dumps(all_resources,default=str) }
+                                    }
+        )
+
+    except Exception as e:
+        logger.error(f"Error in fn_21_validate_module_content: {str(e)}")
+        return create_error_response(
+            500,
+            f'Internal server error : {e}',
+            ERROR_CODES["INTERNAL_ERROR"]
+        )
+
+
 ######################################################
 ######################################################
 ###
@@ -1216,81 +1440,97 @@ def fn_16_delete_metadata_base(event: dict) -> APIGatewayResponse:
 
 def lambda_handler(event, context):  
 
-  try:
+    print(event)
 
-    parameters = json.loads(event['body'])['parameters']        
-    logger.info(f'Parameters :{parameters}')  
+    try:
 
-    logger.info(f'Parameters :{parameters}')  
+        parameters = json.loads(event['body'])['parameters']        
+        logger.info(f'Parameters :{parameters}')  
 
-    if parameters['processId'] == '01-get-metadata-results':
-        response = fn_01_get_metadata_results(parameters)
-    
-    elif parameters['processId'] == '02-create-metadata-search':
-        response = fn_02_create_metadata_search(parameters)
-    
-    elif parameters['processId'] == '03-get-metadata-search-status':
-        response = fn_03_get_metadata_search_status(parameters)
+        logger.info(f'Parameters :{parameters}')  
 
-    elif parameters['processId'] == '04-update-resource-action':
-        response = fn_04_update_resource_action(parameters)
-    
-    elif parameters['processId'] == '05-create-tagging-process':
-        response = fn_05_create_tagging_process(parameters)  
-
-    elif parameters['processId'] == '06-get-tagging-process-status':
-        response = fn_06_get_tagging_process_status(parameters)  
-    
-    elif parameters['processId'] == '07-get-resource-metadata':
-        response = fn_07_get_resource_metadata(parameters)  
+        if parameters['processId'] == '01-get-metadata-results':
+            response = fn_01_get_metadata_results(parameters)
         
-    elif parameters['processId'] == '08-get-dataset-tagging':
-        response = fn_08_get_dataset_tagging(parameters)  
+        elif parameters['processId'] == '02-create-metadata-search':
+            response = fn_02_create_metadata_search(parameters)
+        
+        elif parameters['processId'] == '03-get-metadata-search-status':
+            response = fn_03_get_metadata_search_status(parameters)
+
+        elif parameters['processId'] == '04-update-resource-action':
+            response = fn_04_update_resource_action(parameters)
+        
+        elif parameters['processId'] == '05-create-tagging-process':
+            response = fn_05_create_tagging_process(parameters)  
+
+        elif parameters['processId'] == '06-get-tagging-process-status':
+            response = fn_06_get_tagging_process_status(parameters)  
+        
+        elif parameters['processId'] == '07-get-resource-metadata':
+            response = fn_07_get_resource_metadata(parameters)  
+            
+        elif parameters['processId'] == '08-get-dataset-tagging':
+            response = fn_08_get_dataset_tagging(parameters)  
+        
+        elif parameters['processId'] == '09-create-profile':
+            response = fn_09_create_profile(parameters) 
+        
+        elif parameters['processId'] == '10-update-profile':
+            response = fn_10_update_profile(parameters) 
+
+        elif parameters['processId'] == '11-delete-profile':
+            response = fn_11_delete_profile(parameters) 
+
+        elif parameters['processId'] == '12-get-profiles':
+            response = fn_12_get_profiles(parameters) 
+        
+        elif parameters['processId'] == '13-get-dataset-metadata-bases':
+            response = fn_13_get_dataset_metadata_bases(parameters) 
+
+        elif parameters['processId'] == '14-get-metadata-search':
+            response = fn_14_get_metadata_search(parameters) 
+
+        elif parameters['processId'] == '15-get-dataset-metadata-information':
+            response = fn_15_get_dataset_metadata_information(parameters) 
+
+        elif parameters['processId'] == '16-delete-metadata-base':
+            response = fn_16_delete_metadata_base(parameters) 
+
+        elif parameters['processId'] == '17-get-list-modules':
+            response = fn_17_get_list_modules_from_s3(parameters) 
+
+        elif parameters['processId'] == '18-get-module-content':
+            response = fn_18_get_module_content_from_s3(parameters) 
     
-    elif parameters['processId'] == '09-create-profile':
-        response = fn_09_create_profile(parameters) 
+        elif parameters['processId'] == '19-save-module-content':
+            response = fn_19_save_module_content_to_s3(parameters) 
+
+        elif parameters['processId'] == '20-delete-module-content':
+            response = fn_20_delete_module_content_fom_s3(parameters) 
+
+        elif parameters['processId'] == '21-validate-module-content':
+            response = fn_21_validate_module_content(parameters) 
+        
+
+
+
+        else:
+            response = create_error_response(
+                404,
+                "Route not found",
+                ERROR_CODES["NOT_FOUND"]
+            )
     
-    elif parameters['processId'] == '10-update-profile':
-        response = fn_10_update_profile(parameters) 
+        
+        logger.info(f"Response: {json.dumps(response)}")
+        return response
 
-    elif parameters['processId'] == '11-delete-profile':
-        response = fn_11_delete_profile(parameters) 
-
-    elif parameters['processId'] == '12-get-profiles':
-        response = fn_12_get_profiles(parameters) 
-    
-    elif parameters['processId'] == '13-get-dataset-metadata-bases':
-        response = fn_13_get_dataset_metadata_bases(parameters) 
-
-    elif parameters['processId'] == '14-get-metadata-search':
-        response = fn_14_get_metadata_search(parameters) 
-
-    elif parameters['processId'] == '15-get-dataset-metadata-information':
-        response = fn_15_get_dataset_metadata_information(parameters) 
-
-    elif parameters['processId'] == '16-delete-metadata-base':
-        response = fn_16_delete_metadata_base(parameters) 
-
-    elif parameters['processId'] == '17-get-analysis-insight':
-        response = fn_17_get_analsys_insight(parameters) 
-
-
-    else:
-        response = create_error_response(
-            404,
-            "Route not found",
-            ERROR_CODES["NOT_FOUND"]
-        )
- 
-    
-    logger.info(f"Response: {json.dumps(response)}")
-    return response
-
-  except Exception as e:
-    logger.error(f"Error in main handler: {str(e)}")
-    return create_error_response(
-        500,
-        "Internal server error",
-        ERROR_CODES["INTERNAL_ERROR"]
-    )  
+    except Exception as e:
+        logger.error(f"Error in main handler: {str(e)}")
+        return create_error_response(
+            500,
+            "Internal server error",
+            ERROR_CODES["INTERNAL_ERROR"]
+        )  
 

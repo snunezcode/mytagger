@@ -361,8 +361,9 @@ class AWSResourceDiscovery:
             # Process results
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    result = future.result()
-                    all_tags.extend(result)
+                    #service_name, status, message, resources
+                    service_name, status, message, resources = future.result()
+                    all_tags.extend(resources)
                 except Exception as e:
                     self.logger.error(f"Error processing future: {e}")
           
@@ -380,39 +381,83 @@ class AWSResourceDiscovery:
 
     def download_modules_from_s3(self, region, bucket_name):
         
-        file_name_modules = "scripts.zip"
-        file_name_service_catalog = "services.json"
-        file_name_region_catalog = "regions.json"
-
-        # Initialize S3 client        
-        print(f"Downloading scripts from {bucket_name}/{file_name_modules}")
-
-        s3 = boto3.client('s3',region_name=region)
-
-        # Create a temporary directory to store unzipped scripts
-        temp_dir = '/tmp/scripts'
-        os.makedirs(self.script_path, exist_ok=True)
-        os.makedirs(self.metadata_path, exist_ok=True)
-
-
         try:
-            # Catalogs
-            response = s3.get_object(Bucket=bucket_name, Key=file_name_service_catalog)
-            self.service_catalog = json.loads(response['Body'].read())
+            file_name_modules = "scripts.zip"
+            file_name_service_catalog = "services.json"
+            file_name_region_catalog = "regions.json"
 
-            response = s3.get_object(Bucket=bucket_name, Key=file_name_region_catalog)
-            self.region_catalog = json.loads(response['Body'].read())
-           
-            ## Modules
-            response = s3.get_object(Bucket=bucket_name, Key=file_name_modules)
-            zip_content = response['Body'].read()
+            # Initialize S3 client        
+            print(f"Downloading scripts from {bucket_name}/{file_name_modules}")
+
+            s3 = boto3.client('s3',region_name=region)
+
+            # Create a temporary directory to store unzipped scripts
             
-            with zipfile.ZipFile(io.BytesIO(zip_content)) as zip_ref:
-                zip_ref.extractall(temp_dir)
+            os.makedirs(self.script_path, exist_ok=True)
+            os.makedirs(self.metadata_path, exist_ok=True)
+
+
+            # Get list of modules
+            response = s3.list_objects_v2(Bucket=bucket_name)    
+            modules = [
+                {
+                    'name': item['Key'],
+                    'size': item['Size'],
+                    'lastModified': item['LastModified'].isoformat()
+                }
+                for item in response.get('Contents', [])
+                if item['Key'].endswith('.py') 
+            ]
+
+
+            # Download modules
+            for module in modules:
+                s3.download_file(bucket_name, module['name'], f'{self.script_path}/{module["name"]}')                  
+
+            # Catalogs
+            response = s3.get_object(Bucket=bucket_name, Key=file_name_region_catalog)
+            self.region_catalog = json.loads(response['Body'].read())           
+            
 
         except Exception as e:
             self.logger.error(f"Error downloading scripts from {bucket_name} : {e}")            
             raise
+
+
+
+    ###
+    ###-- Load service catalog
+    ###
+
+    def load_service_catalog(self):
+        try:
+
+            service_catalog = {}
+            modules = []    
+            
+            for filename in os.listdir(self.script_path):                
+                if filename.endswith('.py'):                    
+                    modules.append(filename)
+
+            for module_name in modules:         
+                try:                      
+                    module_name = module_name[:-3]                               
+                    spec = importlib.util.spec_from_file_location(module_name, f'{self.script_path}/{module_name}.py')
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)            
+                    
+                    service_types = module.get_service_types(None,None,None,None)       
+                    services = [f"{module_name}::{key}" for key in service_types.keys()]                           
+                    service_catalog = {**service_catalog, f'{module_name}' : services }
+
+                except Exception as e:
+                    self.logger.error(f"Error getting service types for {module_name}: {e}")                    
+            
+            self.service_catalog = service_catalog
+            
+        except Exception as e:
+            self.logger.error(f"Error loading service catalog: {e}")
+            
 
 
 
@@ -423,7 +468,8 @@ class AWSResourceDiscovery:
     def validate_service_catalog(self):                
         try:
 
-            array_validated = []            
+            print(self.services)
+            array_validated = []                        
             if len(self.services) == 1 and self.services[0] == "All":
                 array_validated = [item for sublist in self.service_catalog.values() for item in sublist]
             else:            
@@ -450,7 +496,7 @@ class AWSResourceDiscovery:
 
 
     ###
-    ###-- CValidate Region Catalog
+    ###-- Validate Region Catalog
     ###
 
     def validate_region_catalog(self):                
@@ -510,6 +556,9 @@ def lambda_handler(event, context):
                                                     region=os.environ['REGION'], 
                                                     bucket_name = os.environ['S3_BUCKET_MODULES']
     )
+
+    # Loading service catalog
+    tag_collector.load_service_catalog()
 
     # Validate service catalog
     tag_collector.validate_service_catalog()

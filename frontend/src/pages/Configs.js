@@ -46,11 +46,12 @@ export const SideMainLayoutMenu = [
       },
     { type: "divider" },
     {
-        text: 'Settings',
+        text: 'Management',
         type: 'section',
         defaultExpanded: true,
         items: [
-            { type: "link", text: "Profile Management", href: "/profiles/" },    
+            { type: "link", text: "Profile", href: "/profiles/" },  
+            { type: "link", text: "Modules", href: "/modules/" },      
         ],
       },
     { type: "divider" },

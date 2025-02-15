@@ -21,6 +21,8 @@ import SmDashboard01 from "./pages/Sm-dashboard-01";
 import SmProfiles01 from "./pages/Sm-profiles-01";
 import SmMetadataBase01 from "./pages/Sm-metadata-base-01";
 import SmMetadataSearch01 from "./pages/Sm-metadata-search-01";
+import SmModules01 from "./pages/Sm-modules-01";
+import SmModules02 from "./pages/Sm-modules-02";
 
 
 //-- Components
@@ -59,6 +61,8 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/tagger/" element={<ProtectedApp><SmTagger01 /> </ProtectedApp>} />
                     <Route path="/dashboard/" element={<ProtectedApp><SmDashboard01 /> </ProtectedApp>} />
                     <Route path="/profiles/" element={<ProtectedApp><SmProfiles01 /> </ProtectedApp>} />
+                    <Route path="/modules/" element={<ProtectedApp><SmModules01 /> </ProtectedApp>} />
+                    <Route path="/modules/validation/" element={<ProtectedApp><SmModules02 /> </ProtectedApp>} />
                     <Route path="/metadata/bases/" element={<ProtectedApp><SmMetadataBase01 /> </ProtectedApp>} />
                     <Route path="/metadata/search/" element={<ProtectedApp><SmMetadataSearch01 /> </ProtectedApp>} />                    
                     <Route path="/authentication" element={<Authentication />} />

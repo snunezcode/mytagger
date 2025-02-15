@@ -314,28 +314,38 @@ class AWSResourceTagger:
     
 
     ###
-    ###-- Download modules and catalog definitions
+    ###-- Download modules 
     ###
     
     def download_modules_from_s3(self, region, bucket_name, zip_key):
         
-        # Initialize S3 client        
-        print(f"Downloading scripts from {bucket_name}/{zip_key}")
-
-        s3 = boto3.client('s3',region_name=region)
-
-        # Create a temporary directory to store unzipped scripts
-        temp_dir = '/tmp/scripts'
-        os.makedirs(self.script_path, exist_ok=True)
-
         try:
-            # Download the zip file from S3
-            response = s3.get_object(Bucket=bucket_name, Key=zip_key)
-            zip_content = response['Body'].read()
 
-            # Unzip the content
-            with zipfile.ZipFile(io.BytesIO(zip_content)) as zip_ref:
-                zip_ref.extractall(temp_dir)
+            # Initialize S3 client        
+            print(f"Downloading scripts from {bucket_name}/{zip_key}")
+
+            s3 = boto3.client('s3',region_name=region)
+
+            # Create a temporary directory to store unzipped scripts            
+            os.makedirs(self.script_path, exist_ok=True)
+
+        
+
+            # Get list of modules
+            response = s3.list_objects_v2(Bucket=bucket_name)    
+            modules = [
+                {
+                    'name': item['Key'],
+                    'size': item['Size'],
+                    'lastModified': item['LastModified'].isoformat()
+                }
+                for item in response.get('Contents', [])
+                if item['Key'].endswith('.py') 
+            ]
+
+            # Download modules
+            for module in modules:
+                s3.download_file(bucket_name, module['name'], f'{self.script_path}/{module["name"]}')                  
 
         except Exception as e:
             self.logger.error(f"Error downloading scripts from {bucket_name} : {e}")            
