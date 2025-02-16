@@ -2,8 +2,9 @@ import json
 import boto3
 from typing import List, Dict, Tuple
 from botocore.exceptions import OperationNotPageableError
+from typing import List, Dict, Tuple
 
-def discovery(self, session, account_id, region, service, service_type, logger):
+def get_service_types(account_id, region, service, service_type):
 
     resource_configs = {
             'Instance': {
@@ -128,67 +129,81 @@ def discovery(self, session, account_id, region, service, service_type, logger):
                 'arn_format': 'arn:aws:ec2:{region}:{account_id}:customer-gateway/{resource_id}'
             }
         }
-
-    if service_type not in resource_configs:
-            raise ValueError(f"Unsupported service type: {service_type}")
-
-    return _discover_resources(session, account_id, region, service, service_type, resource_configs[service_type], logger)
+        
+    return resource_configs
 
 
-def _discover_resources(session, account_id, region, service, service_type, config, logger):
-    client = session.client(service, region_name=region)
+def discovery(self,session, account_id, region, service, service_type, logger):    
+    
+    status = "success"
+    error_message = ""
     resources = []
 
-    method = getattr(client, config['method'])
-    params = {}
-
-    if service_type == 'Snapshot':
-        params['OwnerIds'] = [account_id]
-    elif service_type == 'Image':
-        params['Owners'] = [account_id]
-
     try:
-        paginator = client.get_paginator(config['method'])
-        response_iterator = paginator.paginate(**params)
-    except OperationNotPageableError:
-        # If the operation is not pageable, call the method directly
-        response_iterator = [method(**params)]
+        
+        service_types_list = get_service_types(account_id, region, service, service_type)        
+        if service_type not in service_types_list:
+            raise ValueError(f"Unsupported service type: {service_type}")
 
-    for page in response_iterator:
-        if config['nested']:
-            items = [instance for reservation in page['Reservations'] for instance in reservation['Instances']]
-        else:
-            items = page[config['key']]
+        config = service_types_list[service_type]        
+        client = session.client(service, region_name=region)
 
-        for item in items:
-            resource_id = item[config['id_field']]
-            resource_tags = {tag['Key']: tag['Value'] for tag in item.get('Tags', [])}
-            name_tag = resource_tags.get('Name', '')
+        method = getattr(client, config['method'])
+        params = {}
 
-            creation_date = item.get(config['date_field']) if config['date_field'] else ''
+        if service_type == 'Snapshot':
+            params['OwnerIds'] = [account_id]
+        elif service_type == 'Image':
+            params['Owners'] = [account_id]
 
-            arn = config['arn_format'].format(
+        try:
+            paginator = client.get_paginator(config['method'])
+            response_iterator = paginator.paginate(**params)
+        except OperationNotPageableError:
+            response_iterator = [method(**params)]
+
+        for page in response_iterator:
+            if config['nested']:
+                items = [instance for reservation in page['Reservations'] for instance in reservation['Instances']]
+            else:
+                items = page[config['key']]
+
+            for item in items:
+                resource_id = item[config['id_field']]
+                resource_tags = {tag['Key']: tag['Value'] for tag in item.get('Tags', [])}
+                name_tag = resource_tags.get('Name', '')
+
+                creation_date = item.get(config['date_field']) if config['date_field'] else ''
+
+                arn = config['arn_format'].format(
                     region=region,
                     account_id=account_id,
                     resource_id=resource_id
-            )
+                )
 
-            resources.append({
+                resources.append({
                     "seq": 0,
                     "account_id": account_id,
                     "region": region,
-                    "service" : service,
+                    "service": service,
                     "resource_type": service_type,
                     "resource_id": resource_id,
-                    "name" : name_tag,
+                    "name": name_tag,
                     "creation_date": creation_date,
                     "tags": resource_tags,
-                    "tags_number" : len(resource_tags),
-                    "metadata" : item,
-                    "arn" : arn
+                    "tags_number": len(resource_tags),
+                    "metadata": item,
+                    "arn": arn
                 })
 
-    return resources
+    except Exception as e:
+        status = "error"
+        error_message = str(e)
+        logger.error(f"Error in discover function: {error_message}")
+
+    return f'{service}:{service_type}', status, error_message, resources
+
+
 
 
 

@@ -3,7 +3,7 @@ import boto3
 from typing import List, Dict, Tuple
 from botocore.exceptions import OperationNotPageableError
 
-def discovery(self, session, account_id, region, service, service_type, logger):
+def get_service_types(account_id, region, service, service_type):
 
     resource_configs = {
             'DBCluster': {
@@ -89,66 +89,78 @@ def discovery(self, session, account_id, region, service, service_type, logger):
             }
         }
 
-    if service_type not in resource_configs:
-            raise ValueError(f"Unsupported service type: {service_type}")
+    return resource_configs
 
-    return _discover_resources(session, account_id, region, service, service_type, resource_configs[service_type], logger)
+def discovery(self,session, account_id, region, service, service_type, logger):    
 
 
-def _discover_resources(session, account_id, region, service, service_type, config, logger):   
-
-    client = session.client(service, region_name=region)
+    status = "success"
+    error_message = ""
     resources = []
 
-    method = getattr(client, config['method'])
-    params = {}
-
     try:
-        paginator = client.get_paginator(config['method'])
-        response_iterator = paginator.paginate(**params)
-    except OperationNotPageableError:
-        # If the operation is not pageable, call the method directly
-        response_iterator = [method(**params)]
+    
+        service_types_list = get_service_types(account_id, region, service, service_type)        
+        if service_type not in service_types_list:
+            raise ValueError(f"Unsupported service type: {service_type}")
 
-    for page in response_iterator:
-        items = page[config['key']]
+        config = service_types_list[service_type]        
+        client = session.client(service, region_name=region)
+        
+        method = getattr(client, config['method'])
+        params = {}
 
-        for item in items:
+        try:
+            paginator = client.get_paginator(config['method'])
+            response_iterator = paginator.paginate(**params)
+        except OperationNotPageableError:
+            # If the operation is not pageable, call the method directly
+            response_iterator = [method(**params)]
 
-            resource_id = item[config['id_field']]            
-            creation_date = item.get(config['date_field']) if config['date_field'] else None
-            
-            # Construct the ARN
-            arn = config['arn_format'].format(
-                    region=region,
-                    account_id=account_id,
-                    resource_id=resource_id
-            )
+        for page in response_iterator:
+            items = page[config['key']]
 
-            # Handle tags based on the resource type
-            if config['tag_list_field']:
-                resource_tags = {tag['Key']: tag['Value'] for tag in item.get(config['tag_list_field'], [])}
-            else:                
-                resource_tags = _get_tags_for_resource(client, arn)
+            for item in items:
 
-            name_tag = resource_tags.get('Name', resource_id)
+                resource_id = item[config['id_field']]            
+                creation_date = item.get(config['date_field']) if config['date_field'] else None
+                
+                # Construct the ARN
+                arn = config['arn_format'].format(
+                        region=region,
+                        account_id=account_id,
+                        resource_id=resource_id
+                )
 
-            resources.append({
-                    "seq": 0,
-                    "account_id": account_id,
-                    "region": region,
-                    "service" : service,
-                    "resource_type": service_type,
-                    "resource_id": resource_id,
-                    "name" : name_tag,
-                    "creation_date": creation_date,
-                    "tags": resource_tags,
-                    "tags_number" : len(resource_tags),
-                    "metadata" : item,
-                    "arn" : arn
-                })
+                # Handle tags based on the resource type
+                if config['tag_list_field']:
+                    resource_tags = {tag['Key']: tag['Value'] for tag in item.get(config['tag_list_field'], [])}
+                else:                
+                    resource_tags = _get_tags_for_resource(client, arn)
 
-    return resources
+                name_tag = resource_tags.get('Name', resource_id)
+
+                resources.append({
+                        "seq": 0,
+                        "account_id": account_id,
+                        "region": region,
+                        "service" : service,
+                        "resource_type": service_type,
+                        "resource_id": resource_id,
+                        "name" : name_tag,
+                        "creation_date": creation_date,
+                        "tags": resource_tags,
+                        "tags_number" : len(resource_tags),
+                        "metadata" : item,
+                        "arn" : arn
+                    })
+
+    except Exception as e:
+        status = "error"
+        error_message = str(e)
+        logger.error(f"Error in discover function: {error_message}")
+
+    return f'{service}:{service_type}', status, error_message, resources
 
 
 def _get_tags_for_resource(client, arn):
