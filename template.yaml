@@ -16,6 +16,9 @@ Parameters:
       Type: String
       Description: DSQLCluster
 
+  DSQLClusterId:
+      Type: String
+      Description: DSQLClusterId
   
 
 
@@ -167,9 +170,6 @@ Resources:
             - MetadaManagementFrontendStackSecurityHeadersC0CA0196
         Runtime: cloudfront-js-1.0
       Name: !Join [ "_", ["cloudfront_function_metadata_management_solution", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
-
-#!Sub "https://\${MyApiGateway}.execute-api.\${AWS::Region}.amazonaws.com/prod/
-#https://\${ApiGatewayRestApi}.execute-api.\${AWS::Region}.amazonaws.com/v1/
 
 
 ######################################################################
@@ -494,7 +494,7 @@ Resources:
                             "Action": [
                                 "logs:CreateLogGroup"
                             ],
-                            "Resource": "arn:aws:logs:us-east-1:039783469744:*",
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*",
                             "Effect": "Allow"
                         },
                         {
@@ -502,37 +502,34 @@ Resources:
                                 "logs:CreateLogStream",
                                 "logs:PutLogEvents"
                             ],
-                            "Resource": "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-api:*",
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-api:*",
                             "Effect": "Allow"
                         },                      
-                        {
-                            "Sid": "Statement1",
+                        {                            
                             "Effect": "Allow",
                             "Action": [
                                 "dsql:DbConnectAdmin"
                             ],
                             "Resource": [
-                                "*"
+                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
                             ]
                         },
                         {
-                            "Sid": "Statement2",
                             "Effect": "Allow",
                             "Action": [
                                 "lambda:InvokeFunction"
                             ],
                             "Resource": [
-                                "arn:aws:lambda:us-east-1:039783469744:function:mtdt-mng-lambda-discovery"
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:mtdt-mng-lambda-discovery"
                             ]
                         },
-                        {
-                            "Sid": "Statement3",
+                        {                            
                             "Effect": "Allow",
                             "Action": [
                                 "lambda:InvokeFunction"
                             ],
                             "Resource": [
-                                "arn:aws:lambda:us-east-1:039783469744:function:mtdt-mng-lambda-tagger"
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:mtdt-mng-lambda-tagger"
                             ]
                         },
                         {
@@ -543,7 +540,8 @@ Resources:
                                 "s3:PutObject"
                             ],
                             "Resource": [                                
-                                "arn:aws:s3:::${S3PluginBucket}"
+                                "arn:aws:s3:::${S3PluginBucket}",
+                                "arn:aws:s3:::${S3PluginBucket}/*"
                             ]
                         }
                     ]
@@ -578,7 +576,7 @@ Resources:
                         {
                             "Effect": "Allow",
                             "Action": "logs:CreateLogGroup",
-                            "Resource": "arn:aws:logs:us-east-1:039783469744:*"
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
                         },
                         {
                             "Effect": "Allow",
@@ -587,31 +585,28 @@ Resources:
                                 "logs:PutLogEvents"
                             ],
                             "Resource": [
-                                "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-discovery:*"
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-discovery:*"
                             ]
                         },
                         {
-                            "Sid": "Statement1",
                             "Effect": "Allow",
                             "Action": [
                                 "dsql:DbConnectAdmin"
                             ],
                             "Resource": [
-                                "*"
+                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
                             ]
                         },
                         {
-                            "Sid": "Statement2",
                             "Effect": "Allow",
                             "Action": [
                                 "sts:AssumeRole"
                             ],
                             "Resource": [
-                                "*"
+                                "arn:aws:iam::${AWS::AccountId}:role/IAMRoleTaggerSolution"
                             ]
                         },
                         {
-                            "Sid": "Statement3",
                             "Effect": "Allow",
                             "Action": [
                                 "s3:GetObject",
@@ -619,7 +614,8 @@ Resources:
                                 "s3:PutObject"
                             ],
                             "Resource": [
-                                "arn:aws:s3:::${S3PluginBucket}"
+                                "arn:aws:s3:::${S3PluginBucket}",
+                                "arn:aws:s3:::${S3PluginBucket}/*"
                             ]
                         }
                     ]
@@ -653,7 +649,7 @@ Resources:
                           {
                               "Effect": "Allow",
                               "Action": "logs:CreateLogGroup",
-                              "Resource": "arn:aws:logs:us-east-1:039783469744:*"
+                              "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
                           },
                           {
                               "Effect": "Allow",
@@ -662,31 +658,29 @@ Resources:
                                   "logs:PutLogEvents"
                               ],
                               "Resource": [
-                                  "arn:aws:logs:us-east-1:039783469744:log-group:/aws/lambda/mtdt-mng-lambda-tagger:*"
+                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-tagger:*",
+                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-initdb:*"
                               ]
                           },
                           {
-                              "Sid": "Statement2",
                               "Effect": "Allow",
                               "Action": [
                                   "sts:AssumeRole"
                               ],
-                              "Resource": [
-                                  "*"
+                              "Resource": [                                                                    
+                                  "arn:aws:iam::${AWS::AccountId}:role/IAMRoleTaggerSolution"
                               ]
                           },
                           {
-                              "Sid": "Statement3",
                               "Effect": "Allow",
                               "Action": [
                                   "dsql:DbConnectAdmin"
                               ],
                               "Resource": [
-                                  "*"
+                                  "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
                               ]
                           },
                           {
-                              "Sid": "Statement4",
                               "Effect": "Allow",
                               "Action": [
                                         "s3:GetObject",
@@ -694,7 +688,8 @@ Resources:
                                         "s3:PutObject"
                               ],
                               "Resource": [
-                                  "arn:aws:s3:::${S3PluginBucket}"
+                                  "arn:aws:s3:::${S3PluginBucket}",
+                                  "arn:aws:s3:::${S3PluginBucket}/*"
                               ]
                           }
                       ]
@@ -804,6 +799,39 @@ Resources:
         S3Key: "functions/lambda.tagger.zip"
 
 
+  LambdaFunctionInitDB:
+    Type: AWS::Lambda::Function
+    Properties:        
+      Environment: 
+          Variables:                          
+              DBHOST: !Ref DSQLCluster
+              DBNAME: "postgres"
+              DBPORT: "5432"
+              DBUSER: "admin"
+              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              MAX_WORKERS : "10"
+              S3_BUCKET_METADATA : !Ref S3PluginBucket
+              S3_BUCKET_MODULES : !Ref S3PluginBucket
+              REGION: !Ref AWS::Region
+
+      FunctionName: "mtdt-mng-lambda-initdb"
+      Handler: "lambda_function.lambda_handler"
+      Architectures: 
+        - "x86_64"
+      MemorySize: 128      
+      Role: !GetAtt IAMRoleLambdaTagger.Arn
+      Runtime: "python3.11"
+      Timeout: 60
+      TracingConfig: 
+          Mode: "PassThrough"
+      EphemeralStorage: 
+          Size: 512
+      Layers:
+        - !Ref LambdaLayer        
+      Code:
+        S3Bucket: !Ref S3Artifacts
+        S3Key: "functions/lambda.initdb.zip"
+
 
   LambdaLayer:
     Type: AWS::Lambda::LayerVersion
@@ -817,13 +845,7 @@ Resources:
         - python3.11
       LicenseInfo: MIT        
 
-
-  DBInit:
-    Type: Custom::DBInit
-    DependsOn: LambdaFunctionApi
-    Properties:
-      ServiceToken: !GetAtt LambdaFunctionApi.Arn
-      
+     
 
 
 ######################################################################
@@ -962,7 +984,7 @@ Resources:
                               "AWS": "${IAMRoleLambdaTagger.Arn}"
                           },
                           "Action": "sts:AssumeRole"
-                      },
+                      }
                   ]
               }
           MaxSessionDuration: 3600
@@ -1009,3 +1031,6 @@ Outputs:
         Description: S3PluginBucket
         Value: !Ref S3PluginBucket
 
+    Region:
+        Description: Region
+        Value: !Ref AWS::Region

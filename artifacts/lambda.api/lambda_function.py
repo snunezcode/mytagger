@@ -282,6 +282,7 @@ MAX_WORKERS = int(os.environ['MAX_WORKERS'])
 
 
 
+
 ######################################################
 ######################################################
 ###
@@ -1439,11 +1440,9 @@ def fn_21_validate_module_content(event: dict) -> APIGatewayResponse:
 
 
 def lambda_handler(event, context):  
-
-    print(event)
-
+    
     try:
-
+        
         parameters = json.loads(event['body'])['parameters']        
         logger.info(f'Parameters :{parameters}')  
 
@@ -1510,11 +1509,7 @@ def lambda_handler(event, context):
             response = fn_20_delete_module_content_fom_s3(parameters) 
 
         elif parameters['processId'] == '21-validate-module-content':
-            response = fn_21_validate_module_content(parameters) 
-        
-
-
-
+            response = fn_21_validate_module_content(parameters)         
         else:
             response = create_error_response(
                 404,
