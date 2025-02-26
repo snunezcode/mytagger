@@ -11,8 +11,18 @@ fi
 
 echo "Deploying to bucket: \$BUCKET_NAME"
 
-# Navigate to the project directory (we're already in the repo root)
-/tmp/repo/mytagger/frontend
+# Navigate to the project directory (adjust if your React app is in a subdirectory)
+# cd ./react-app  # Uncomment if needed
+cd /tmp/mytagger/frontend
+
+# Check if npm is available, if not install it
+if ! command -v npm &> /dev/null; then
+  echo "npm not found, installing Node.js"
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+  export NVM_DIR="\$HOME/.nvm"
+  [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"  # Load nvm
+  nvm install 16  # Install Node.js 16
+fi
 
 # Install dependencies
 echo "Installing dependencies"
@@ -21,6 +31,12 @@ npm install
 # Build the React app
 echo "Building React application"
 npm run build
+
+# Install AWS CLI if not available
+if ! command -v aws &> /dev/null; then
+  echo "AWS CLI not found, installing"
+  pip3 install awscli --upgrade
+fi
 
 # Deploy to S3
 echo "Deploying to S3"

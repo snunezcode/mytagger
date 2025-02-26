@@ -1,7 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Simple Lambda to clone repo and run script'
 
+Parameters:
+  Username:
+      Type: String
+      Description: Username (email)
+      AllowedPattern: "\\w[-\\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\\.)+[A-Za-z]{2,14}"
+      Default: "snmatus@amazon.com"
 
+Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -25,8 +32,7 @@ Description: 'Simple Lambda to clone repo and run script'
                   - s3:GetObject
                   - s3:ListBucket
                 Resource:
-                  - !GetAtt ReactAppBucket.Arn
-                  - !Sub \${ReactAppBucket.Arn}/*
+                  - "*"                  
         - PolicyName: CloudFormationPolicy
           PolicyDocument:
             Version: '2012-10-17'
@@ -38,6 +44,7 @@ Description: 'Simple Lambda to clone repo and run script'
   ExecuteRepoScript:
     Type: AWS::Lambda::Function
     Properties:
+      FunctionName: "mtdt-mng-lambda-deployment"
       Handler: index.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.9
