@@ -18,10 +18,14 @@ cd /tmp/repo/mytagger-main/frontend
 # Check if npm is available, if not install it
 if ! command -v npm &> /dev/null; then
   echo "npm not found, installing Node.js"
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-  export NVM_DIR="\$HOME/.nvm"
-  [ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"  # Load nvm
-  nvm install 16  # Install Node.js 16
+  #curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+  #export NVM_DIR="\$HOME/.nvm"
+  #[ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"  # Load nvm
+  #nvm install 16  # Install Node.js 16
+  curl https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh --output install.sh
+  sh install.sh
+  . ~/.nvm/nvm.sh
+  nvm install 23.4.0
 fi
 
 # Install dependencies
