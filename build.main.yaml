@@ -58,6 +58,9 @@ Resources:
           import subprocess
           import os
           import logging
+          import urllib.request
+          import zipfile
+          import shutil
           
           # Configure logging
           logger = logging.getLogger()
@@ -69,7 +72,8 @@ Resources:
               # Extract parameters
               request_type = event['RequestType']
               resource_props = event['ResourceProperties']
-              repo_url = resource_props.get('RepoUrl')
+              repo_owner = resource_props.get('RepoOwner')
+              repo_name = resource_props.get('RepoName')
               repo_branch = resource_props.get('RepoBranch', 'main')
               script_path = resource_props.get('ScriptPath')
               bucket_name = resource_props.get('BucketName')
@@ -84,21 +88,51 @@ Resources:
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physical_id)
                       return
                   
-                  # For Create and Update: clone repo and run script
+                  # For Create and Update: download repo and run script
                   work_dir = '/tmp/repo'
+                  zip_path = '/tmp/repo.zip'
                   
                   # Clean existing directory if it exists
-                  subprocess.run(['rm', '-rf', work_dir], check=True)
-                  subprocess.run(['mkdir', '-p', work_dir], check=True)
+                  if os.path.exists(work_dir):
+                      shutil.rmtree(work_dir)
+                  os.makedirs(work_dir)
                   
-                  # Clone the repository
-                  logger.info(f"Cloning repository: {repo_url}, branch: {repo_branch}")
-                  clone_cmd = ['git', 'clone', '--branch', repo_branch, '--single-branch', '--depth', '1', repo_url, work_dir]
-                  subprocess.run(clone_cmd, check=True)
+                  # Download repository as ZIP
+                  zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{repo_branch}.zip"
+                  logger.info(f"Downloading repository from {zip_url}")
+                  
+                  try:
+                      urllib.request.urlretrieve(zip_url, zip_path)
+                  except Exception as e:
+                      logger.error(f"Failed to download repo: {str(e)}")
+                      raise
+                  
+                  # Extract ZIP file
+                  logger.info("Extracting repository")
+                  with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                      zip_ref.extractall('/tmp')
+                  
+                  # Find the extracted directory (it includes branch name)                  
+                  extracted_dir = f"/tmp/{repo_name}-{repo_branch}"
+                  print(extracted_dir)
+                  if not os.path.exists(extracted_dir):
+                      # Try alternate naming pattern
+                      dirs = [d for d in os.listdir('/tmp') if os.path.isdir(os.path.join('/tmp', d)) and d.startswith(f"{repo_name}-")]
+                      if dirs:
+                          extracted_dir = os.path.join('/tmp', dirs[0])
+                      else:
+                          raise Exception(f"Could not find extracted repository directory")
+                  
+                  logger.info(f"Repository extracted to {extracted_dir}")
                   
                   # Make script executable
-                  full_script_path = os.path.join(work_dir, script_path)
-                  subprocess.run(['chmod', '+x', full_script_path], check=True)
+                  full_script_path = os.path.join(extracted_dir, script_path)
+                  logger.info(f"Script path: {full_script_path}")
+                  
+                  if not os.path.exists(full_script_path):
+                      raise Exception(f"Script path not found: {full_script_path}")
+                  
+                  os.chmod(full_script_path, 0o755)  # Make executable
                   
                   # Execute the script
                   logger.info(f"Executing script: {full_script_path}")
@@ -107,6 +141,7 @@ Resources:
                   
                   result = subprocess.run(
                       [full_script_path],
+                      cwd=extracted_dir,  # Run from repo root
                       env=env,
                       stdout=subprocess.PIPE,
                       stderr=subprocess.PIPE,
@@ -116,7 +151,8 @@ Resources:
                   
                   # Log script output
                   logger.info(f"Script stdout: {result.stdout}")
-                  logger.info(f"Script stderr: {result.stderr}")
+                  if result.stderr:
+                      logger.info(f"Script stderr: {result.stderr}")
                   
                   # Add script output to response
                   response_data = {
@@ -133,7 +169,8 @@ Resources:
     Type: Custom::RepoScriptExecution
     Properties:
       ServiceToken: !GetAtt ExecuteRepoScript.Arn
-      RepoUrl: "https://github.com/snunezcode/mytagger.git"  # Replace with your repo URL
-      RepoBranch: "main"  # Replace with your branch name
+      RepoOwner: "sunuezcode"  # GitHub username or organization
+      RepoName: "mytagger"      # Repository name
+      RepoBranch: "main"         # Branch name
       ScriptPath: "deploy-script.sh"  # Path to script in repo
       BucketName: "mtdt-mng-s3-application-12b94184e42f"
