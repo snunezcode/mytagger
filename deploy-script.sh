@@ -13,7 +13,7 @@ echo "Deploying to bucket: \$BUCKET_NAME"
 
 # Navigate to the project directory (adjust if your React app is in a subdirectory)
 # cd ./react-app  # Uncomment if needed
-cd /tmp/mytagger-main/frontend
+cd /tmp/repo/mytagger-main/frontend
 
 # Check if npm is available, if not install it
 if ! command -v npm &> /dev/null; then
