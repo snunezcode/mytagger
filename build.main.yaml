@@ -8,6 +8,21 @@ Parameters:
       AllowedPattern: "\\w[-\\w.+]*@([A-Za-z0-9][-A-Za-z0-9]+\\.)+[A-Za-z]{2,14}"
       Default: "snmatus@amazon.com"
 
+  RepoUrl:
+    Type: String
+    Description: "Git repository URL (HTTPS)"
+    Default: "https://github.com/snunezcode/mytagger.git"
+  
+  RepoBranch:
+    Type: String
+    Default: "main"
+    Description: "Branch name"
+
+  ScriptPath:
+    Type: String
+    Description: "Path to script in repo"
+    Default: "deploy-script.sh"
+
 Resources:
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -52,28 +67,29 @@ Resources:
       MemorySize: 2048
       Code:
         ZipFile: |
+          import os
           import json
           import boto3
           import cfnresponse
           import subprocess
-          import os
           import logging
           import urllib.request
           import zipfile
           import shutil
+          from urllib.parse import urlparse
           
           # Configure logging
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
           
           def lambda_handler(event, context):
+              """Lambda function handler for CloudFormation custom resource"""
               logger.info(f"Received event: {json.dumps(event)}")
               
               # Extract parameters
               request_type = event['RequestType']
               resource_props = event['ResourceProperties']
-              repo_owner = resource_props.get('RepoOwner')
-              repo_name = resource_props.get('RepoName')
+              repo_url = resource_props.get('RepoUrl')
               repo_branch = resource_props.get('RepoBranch', 'main')
               script_path = resource_props.get('ScriptPath')
               bucket_name = resource_props.get('BucketName')
@@ -89,41 +105,16 @@ Resources:
                       return
                   
                   # For Create and Update: download repo and run script
-                  work_dir = '/tmp/repo'
-                  zip_path = '/tmp/repo.zip'
+                  # Use the GitHub download code
+                  repo_download_result = download_github_repo(repo_url, repo_branch)
                   
-                  # Clean existing directory if it exists
-                  if os.path.exists(work_dir):
-                      shutil.rmtree(work_dir)
-                  os.makedirs(work_dir)
+                  if not repo_download_result.get('success'):
+                      raise Exception(f"Failed to download repository: {repo_download_result.get('error')}")
                   
-                  # Download repository as ZIP
-                  zip_url = f"https://github.com/{repo_owner}/{repo_name}/archive/refs/heads/{repo_branch}.zip"
-                  logger.info(f"Downloading repository from {zip_url}")
-                  
-                  try:
-                      urllib.request.urlretrieve(zip_url, zip_path)
-                  except Exception as e:
-                      logger.error(f"Failed to download repo: {str(e)}")
-                      raise
-                  
-                  # Extract ZIP file
-                  logger.info("Extracting repository")
-                  with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                      zip_ref.extractall('/tmp')
-                  
-                  # Find the extracted directory (it includes branch name)                  
-                  extracted_dir = f"/tmp/{repo_name}-{repo_branch}"
-                  print(extracted_dir)
-                  if not os.path.exists(extracted_dir):
-                      # Try alternate naming pattern
-                      dirs = [d for d in os.listdir('/tmp') if os.path.isdir(os.path.join('/tmp', d)) and d.startswith(f"{repo_name}-")]
-                      if dirs:
-                          extracted_dir = os.path.join('/tmp', dirs[0])
-                      else:
-                          raise Exception(f"Could not find extracted repository directory")
-                  
-                  logger.info(f"Repository extracted to {extracted_dir}")
+                  # Get the path to the extracted repo
+                  extracted_dir = repo_download_result.get('path')
+                  logger.info(f"Repository downloaded to: {extracted_dir}")
+                  logger.info(f"Repository contents: {os.listdir(extracted_dir)}")
                   
                   # Make script executable
                   full_script_path = os.path.join(extracted_dir, script_path)
@@ -139,38 +130,118 @@ Resources:
                   env = os.environ.copy()
                   env['BUCKET_NAME'] = bucket_name  # Pass bucket name to script
                   
-                  result = subprocess.run(
+                  script_result = subprocess.run(
                       [full_script_path],
                       cwd=extracted_dir,  # Run from repo root
                       env=env,
                       stdout=subprocess.PIPE,
                       stderr=subprocess.PIPE,
-                      text=True,
-                      check=True
+                      text=True
                   )
                   
                   # Log script output
-                  logger.info(f"Script stdout: {result.stdout}")
-                  if result.stderr:
-                      logger.info(f"Script stderr: {result.stderr}")
+                  logger.info(f"Script stdout: {script_result.stdout}")
+                  if script_result.stderr:
+                      logger.info(f"Script stderr: {script_result.stderr}")
+                  
+                  if script_result.returncode != 0:
+                      raise Exception(f"Script execution failed with exit code {script_result.returncode}: {script_result.stderr}")
                   
                   # Add script output to response
                   response_data = {
-                      'ScriptOutput': result.stdout,
+                      'ScriptOutput': script_result.stdout,
                       'ExecutionTime': subprocess.check_output(['date']).decode('utf-8').strip()
                   }
                   
                   cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physical_id)
+              
               except Exception as e:
                   logger.error(f"Error: {str(e)}")
                   cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)}, physical_id)
+          
+          def download_github_repo(repo_url, branch='main'):
+              """
+              Download a public GitHub repository without using Git
+              Returns a dictionary with the download results
+              """
+              try:
+                  # Parse the GitHub URL to extract owner and repo name
+                  parsed_url = urlparse(repo_url)
+                  path_parts = parsed_url.path.strip('/').split('/')
+                  
+                  if len(path_parts) < 2:
+                      return {'success': False, 'error': 'Invalid GitHub URL format'}
+                  
+                  owner = path_parts[0]
+                  repo_name = path_parts[1]
+                  
+                  # Remove .git extension if present
+                  if repo_name.endswith('.git'):
+                      repo_name = repo_name[:-4]
+                  
+                  # Create a temporary directory for the download
+                  tmp_dir = '/tmp/repo'
+                  if os.path.exists(tmp_dir):
+                      shutil.rmtree(tmp_dir)
+                  os.makedirs(tmp_dir)
+                  
+                  # Generate the zip URL for the GitHub repository
+                  zip_url = f"https://github.com/{owner}/{repo_name}/archive/refs/heads/{branch}.zip"
+                  logger.info(f"Downloading repository from: {zip_url}")
+                  
+                  # Download the zip file using urllib (built-in)
+                  zip_path = "/tmp/repo.zip"
+                  
+                  # Add user-agent to avoid GitHub API limitations
+                  headers = {
+                      'User-Agent': 'AWS Lambda GitHub Downloader (Python)'
+                  }
+                  
+                  req = urllib.request.Request(zip_url, headers=headers)
+                  
+                  try:
+                      with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+                          shutil.copyfileobj(response, out_file)
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          return {'success': False, 'error': f'Repository or branch not found: {owner}/{repo_name}/{branch}'}
+                      else:
+                          return {'success': False, 'error': f'Failed to download repository: {str(e)}'}
+                  
+                  # Extract the zip file
+                  with zipfile.ZipFile(zip_path) as zip_ref:
+                      zip_ref.extractall(tmp_dir)
+                  
+                  # Get the extracted folder name (usually repo-branch)
+                  extracted_dir = os.path.join(tmp_dir, f"{repo_name}-{branch}")
+                  
+                  # Ensure the directory exists
+                  if not os.path.exists(extracted_dir):
+                      # Try to find the correct directory
+                      directories = [d for d in os.listdir(tmp_dir) if os.path.isdir(os.path.join(tmp_dir, d))]
+                      if directories:
+                          extracted_dir = os.path.join(tmp_dir, directories[0])
+                      else:
+                          return {'success': False, 'error': 'Could not find extracted repository directory'}
+                  
+                  logger.info(f"Repository extracted to: {extracted_dir}")
+                  return {
+                      'success': True,
+                      'path': extracted_dir,
+                      'repo_name': repo_name,
+                      'branch': branch
+                  }
+                  
+              except Exception as e:
+                  logger.error(f"Error downloading repository: {str(e)}")
+                  return {'success': False, 'error': str(e)}
 
   RepoScriptExecution:
     Type: Custom::RepoScriptExecution
     Properties:
       ServiceToken: !GetAtt ExecuteRepoScript.Arn
-      RepoOwner: "sunuezcode"  # GitHub username or organization
-      RepoName: "mytagger"      # Repository name
-      RepoBranch: "main"         # Branch name
-      ScriptPath: "deploy-script.sh"  # Path to script in repo
+      RepoUrl: !Ref RepoUrl
+      RepoBranch: !Ref RepoBranch
+      ScriptPath: !Ref ScriptPath
       BucketName: "mtdt-mng-s3-application-12b94184e42f"
+
