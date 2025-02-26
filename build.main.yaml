@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Simple Lambda to clone repo and run script'
+
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3DeploymentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt ReactAppBucket.Arn
+                  - !Sub \${ReactAppBucket.Arn}/*
+        - PolicyName: CloudFormationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: cloudformation:SendResponse
+                Resource: '*'
+
+  ExecuteRepoScript:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 300  # 5 minutes
+      MemorySize: 2048
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import cfnresponse
+          import subprocess
+          import os
+          import logging
+          
+          # Configure logging
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def lambda_handler(event, context):
+              logger.info(f"Received event: {json.dumps(event)}")
+              
+              # Extract parameters
+              request_type = event['RequestType']
+              resource_props = event['ResourceProperties']
+              repo_url = resource_props.get('RepoUrl')
+              repo_branch = resource_props.get('RepoBranch', 'main')
+              script_path = resource_props.get('ScriptPath')
+              bucket_name = resource_props.get('BucketName')
+              physical_id = 'RepoScriptExecution'
+              
+              response_data = {}
+              
+              try:
+                  # Handle delete request
+                  if request_type == 'Delete':
+                      logger.info("Delete request - no action needed")
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physical_id)
+                      return
+                  
+                  # For Create and Update: clone repo and run script
+                  work_dir = '/tmp/repo'
+                  
+                  # Clean existing directory if it exists
+                  subprocess.run(['rm', '-rf', work_dir], check=True)
+                  subprocess.run(['mkdir', '-p', work_dir], check=True)
+                  
+                  # Clone the repository
+                  logger.info(f"Cloning repository: {repo_url}, branch: {repo_branch}")
+                  clone_cmd = ['git', 'clone', '--branch', repo_branch, '--single-branch', '--depth', '1', repo_url, work_dir]
+                  subprocess.run(clone_cmd, check=True)
+                  
+                  # Make script executable
+                  full_script_path = os.path.join(work_dir, script_path)
+                  subprocess.run(['chmod', '+x', full_script_path], check=True)
+                  
+                  # Execute the script
+                  logger.info(f"Executing script: {full_script_path}")
+                  env = os.environ.copy()
+                  env['BUCKET_NAME'] = bucket_name  # Pass bucket name to script
+                  
+                  result = subprocess.run(
+                      [full_script_path],
+                      env=env,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE,
+                      text=True,
+                      check=True
+                  )
+                  
+                  # Log script output
+                  logger.info(f"Script stdout: {result.stdout}")
+                  logger.info(f"Script stderr: {result.stderr}")
+                  
+                  # Add script output to response
+                  response_data = {
+                      'ScriptOutput': result.stdout,
+                      'ExecutionTime': subprocess.check_output(['date']).decode('utf-8').strip()
+                  }
+                  
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data, physical_id)
+              except Exception as e:
+                  logger.error(f"Error: {str(e)}")
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)}, physical_id)
+
+  RepoScriptExecution:
+    Type: Custom::RepoScriptExecution
+    Properties:
+      ServiceToken: !GetAtt ExecuteRepoScript.Arn
+      RepoUrl: "https://github.com/snunezcode/mytagger.git"  # Replace with your repo URL
+      RepoBranch: "main"  # Replace with your branch name
+      ScriptPath: "deploy-script.sh"  # Path to script in repo
+      BucketName: "mtdt-mng-s3-application-12b94184e42f"
