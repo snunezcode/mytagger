@@ -22,13 +22,13 @@ Metadata Management Solution empowers organizations to optimize their AWS resour
 
 ## Key features
 
-- [Cross-account and cross-region automated tagging.]
+- Cross-account and cross-region automated tagging.
 
-- [Custom tag filtering for precise resource management.]
+- Custom tag filtering for precise resource management.
 
-- [Comprehensive metadata search functionality.]
+- Comprehensive metadata search functionality.
 
-- [Fully serverless architecture for scalability and cost-efficiency.]
+- Fully serverless architecture for scalability and cost-efficiency.
 
 
 
@@ -51,27 +51,28 @@ A startup uses the metadata search feature to quickly locate underutilized resou
 > **Time to deploy:** Approximately 10 minutes.
 
 
- - [1.- Open Linux/MAC OS Terminal]
+ - 1.- Open Linux/MAC OS Terminal
 
 
-- [2.- Setup your AWS Credentials using OS Variables in case you don't have them]
-
+- 2.- Setup your AWS Credentials using OS Variables in case you don't have them
+```
 export AWS_ACCESS_KEY_ID=XXXXXXX
 export AWS_SECRET_ACCESS_KEY=XXXXXX
 export AWS_DEFAULT_REGION=us-east-1
+```
 
-
-- [3.- Verify AWS CLI is 2.22.12 or above, if not update AWS CLI.]
-
+- 3.- Verify AWS CLI is 2.22.12 or above, if not update AWS CLI.
+```
 aws --version
 
 AWS CLI Update Reference
-========================
+
 https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html#getting-started-install-instructions
+```
 
+- 4.- Verify NodeJS version 23.4 or above installed, if not install it.
 
-- [4.- Verify NodeJS version 23.4 or above installed, if not install it.]
-
+```
 #Verify
 node -e "console.log('Running Node.js ' + process.version)"
 
@@ -80,26 +81,30 @@ curl https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh --output in
 sh install.sh
 . ~/.nvm/nvm.sh
 nvm install 23.4.0
+```
 
+- 5.- Clone the Github repository
 
-- [5.- Clone the Github repository]
-
+```
 git clone https://github.com/snunezcode/mytagger.git
 cd mytagger
+```
 
+- 6.- Set username for application access
 
-- [6.- Set username for application access]
+```
+export username=myemail@example.com
+```
 
-export username=snmatus@amazon.com
-
-
-- [7.- Perform setup installation]
+- 7.- Perform setup installation
+```
 sh setup.sh $username
+```
 
-
-- [8.- Open Application URL using the output PublicAppURL]
+- 8.- Open Application URL using the output PublicAppURL
+```
 PublicAppURL   : https://XXXXXXXX.cloudfront.net
-
+```
 
 
 ## Security
