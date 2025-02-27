@@ -34,13 +34,13 @@ Metadata Management Solution empowers organizations to optimize their AWS resour
 
 ## Use cases
 
-### Cost Allocation
+- ### Cost Allocation
 A large enterprise uses Metadata Management Solution to automatically tag resources across multiple departments, enabling accurate cost attribution and budgeting.
 
-### Security Compliance
+- ### Security Compliance
 A financial services company leverages the application to ensure all resources are properly tagged for regulatory compliance, using custom filters to identify and rectify any non-compliant resources.
 
-### Resource Optimization
+- ### Resource Optimization
 A startup uses the metadata search feature to quickly locate underutilized resources across their AWS infrastructure, allowing them to optimize their cloud spend and improve efficiency.
 
 
