@@ -26,157 +26,159 @@ Resources:
             Action: 'sts:AssumeRole'
       Policies:
         - PolicyName: "LambdaPolicy"
-            PolicyDocument: !Sub |
+          PolicyDocument: !Sub |
                 {
                   "Version": "2012-10-17",
                   "Statement": [
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "cloudformation:CreateStack",
-                        "cloudformation:DescribeStacks",
-                        "cloudformation:UpdateStack",
-                        "cloudformation:DeleteStack",
-                        "cloudformation:GetTemplate"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "s3:CreateBucket",
-                        "s3:PutBucketPolicy",
-                        "s3:PutBucketVersioning",
-                        "s3:PutBucketPublicAccessBlock",
-                        "s3:PutBucketOwnershipControls",
-                        "s3:GetObject",
-                        "s3:PutObject",
-                        "s3:ListBucket"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "cloudfront:CreateDistribution",
-                        "cloudfront:CreateFunction",
-                        "cloudfront:UpdateDistribution",
-                        "cloudfront:CreateOriginAccessControl",
-                        "cloudfront:GetFunction",
-                        "cloudfront:PublishFunction",
-                        "cloudfront:DescribeFunction",
-                        "cloudfront:CreateDistribution",
-                        "cloudfront:CreateFunction",
-                        "cloudfront:UpdateDistribution",
-                        "cloudfront:CreateOriginAccessControl",
-                        "cloudfront:GetOriginAccessControl",
-                        "cloudfront:GetOriginAccessControlConfig",
-                        "cloudfront:GetFunction",
-                        "cloudfront:PublishFunction",
-                        "cloudfront:DescribeFunction",
-                        "cloudfront:TagResource",
-                        "cloudfront:CreateDistribution",
-                        "cloudfront:GetDistribution",
-                        "cloudfront:UpdateDistribution",
-                        "cloudfront:GetDistributionConfig",
-                        "cloudfront:ListDistributions",
-                        "cloudfront:TagResource",
-                        "cloudfront:CreateOriginAccessControl",
-                        "cloudfront:GetOriginAccessControl",
-                        "cloudfront:GetOriginAccessControlConfig",
-                        "cloudfront:ListOriginAccessControls",
-                        "cloudfront:CreateFunction",
-                        "cloudfront:GetFunction",
-                        "cloudfront:UpdateFunction",
-                        "cloudfront:PublishFunction",
-                        "cloudfront:DescribeFunction"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "iam:CreateRole",
-                        "iam:PutRolePolicy",
-                        "iam:CreatePolicy",
-                        "iam:AttachRolePolicy",
-                        "iam:PassRole",
-                        "iam:GetRole",
-                        "iam:GetPolicy",
-                        "iam:getRolePolicy"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "cognito-idp:CreateUserPool",
-                        "cognito-idp:CreateUserPoolClient",
-                        "cognito-idp:AdminCreateUser",
-                        "cognito-idp:TagResource",
-                        "cognito-idp:DescribeUserPool",
-                        "cognito-idp:AdminGetUser",
-                        "cognito-idp:DescribeUserPoolClient"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "apigateway:POST",
-                        "apigateway:GET",
-                        "apigateway:PUT",
-                        "apigateway:PATCH"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "lambda:CreateFunction",
-                        "lambda:GetFunction",
-                        "lambda:AddPermission",
-                        "lambda:PublishLayerVersion",
-                        "lambda:GetLayerVersion"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "dsql:DbConnectAdmin",
-                        "dsql:CreateCluster",
-                        "dsql:TagResource"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Action": [
-                        "iam:CreatePolicy",
-                        "iam:CreateRole"
-                      ],
-                      "Resource": "*",
-                      "Effect": "Allow"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "logs:CreateLogGroup",
-                        "logs:CreateLogStream",
-                        "logs:PutLogEvents",
-                        "logs:DescribeLogGroups"
-                      ],
-                      "Resource": "*"
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "sns:Publish"
-                      ],
-                      "Resource": "*"
-                    }
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cloudformation:CreateStack",
+                              "cloudformation:DescribeStacks",
+                              "cloudformation:UpdateStack",
+                              "cloudformation:DeleteStack",
+                              "cloudformation:GetTemplate"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "s3:CreateBucket",
+                              "s3:PutBucketPolicy",
+                              "s3:PutBucketVersioning",
+                              "s3:PutBucketPublicAccessBlock",
+                              "s3:PutBucketOwnershipControls",
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:ListBucket",
+                              "s3:PutEncryptionConfiguration",
+                              "s3:PutLifecycleConfiguration"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cloudfront:CreateDistribution",
+                              "cloudfront:CreateFunction",
+                              "cloudfront:UpdateDistribution",
+                              "cloudfront:CreateOriginAccessControl",
+                              "cloudfront:GetFunction",
+                              "cloudfront:PublishFunction",
+                              "cloudfront:DescribeFunction",
+                              "cloudfront:CreateDistribution",
+                              "cloudfront:CreateFunction",
+                              "cloudfront:UpdateDistribution",
+                              "cloudfront:CreateOriginAccessControl",
+                              "cloudfront:GetOriginAccessControl",
+                              "cloudfront:GetOriginAccessControlConfig",
+                              "cloudfront:GetFunction",
+                              "cloudfront:PublishFunction",
+                              "cloudfront:DescribeFunction",
+                              "cloudfront:TagResource",
+                              "cloudfront:CreateDistribution",
+                              "cloudfront:GetDistribution",
+                              "cloudfront:UpdateDistribution",
+                              "cloudfront:GetDistributionConfig",
+                              "cloudfront:ListDistributions",
+                              "cloudfront:TagResource",
+                              "cloudfront:CreateOriginAccessControl",
+                              "cloudfront:GetOriginAccessControl",
+                              "cloudfront:GetOriginAccessControlConfig",
+                              "cloudfront:ListOriginAccessControls",
+                              "cloudfront:CreateFunction",
+                              "cloudfront:GetFunction",
+                              "cloudfront:UpdateFunction",
+                              "cloudfront:PublishFunction",
+                              "cloudfront:DescribeFunction"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:CreateRole",
+                              "iam:PutRolePolicy",
+                              "iam:CreatePolicy",
+                              "iam:AttachRolePolicy",
+                              "iam:PassRole",
+                              "iam:GetRole",
+                              "iam:GetPolicy",
+                              "iam:getRolePolicy"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cognito-idp:CreateUserPool",
+                              "cognito-idp:CreateUserPoolClient",
+                              "cognito-idp:AdminCreateUser",
+                              "cognito-idp:TagResource",
+                              "cognito-idp:DescribeUserPool",
+                              "cognito-idp:AdminGetUser",
+                              "cognito-idp:DescribeUserPoolClient"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "apigateway:POST",
+                              "apigateway:GET",
+                              "apigateway:PUT",
+                              "apigateway:PATCH"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "lambda:CreateFunction",
+                              "lambda:GetFunction",
+                              "lambda:AddPermission",
+                              "lambda:PublishLayerVersion",
+                              "lambda:GetLayerVersion"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "dsql:DbConnectAdmin",
+                              "dsql:CreateCluster",
+                              "dsql:TagResource"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Action": [
+                              "iam:CreatePolicy",
+                              "iam:CreateRole"
+                          ],
+                          "Resource": "*",
+                          "Effect": "Allow"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "logs:CreateLogGroup",
+                              "logs:CreateLogStream",
+                              "logs:PutLogEvents",
+                              "logs:DescribeLogGroups"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "sns:Publish"
+                          ],
+                          "Resource": "*"
+                      }
                   ]
-                }       
+              }
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project

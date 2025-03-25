@@ -3,7 +3,7 @@ username=$1
 id=$(date '+%H%M%S')
 start_time=$(date +%s)
 
-stack_name="metadata-management"
+stack_name="deployment-metadata-management-solution"
 template_frontend="solution.template.yaml"
 echo "`date '+%H:%M:%S'` -  ## Creating AWS Cloudformation StackID : $id "
 
