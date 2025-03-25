@@ -1,0 +1,319 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to build a Metadata Management Solution'
+
+Parameters:
+  GitHubRepositoryUrl:
+    Type: String
+    Description: GitHub repository URL (https format)
+    Default : https://github.com/aws-samples/metadata-management-solution.git
+    
+  Username:
+    Type: String
+    Description: Username
+    Default: mail@example.com
+          
+    
+Resources: 
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "LambdaPolicy"
+            PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "cloudformation:CreateStack",
+                        "cloudformation:DescribeStacks",
+                        "cloudformation:UpdateStack",
+                        "cloudformation:DeleteStack",
+                        "cloudformation:GetTemplate"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "s3:CreateBucket",
+                        "s3:PutBucketPolicy",
+                        "s3:PutBucketVersioning",
+                        "s3:PutBucketPublicAccessBlock",
+                        "s3:PutBucketOwnershipControls",
+                        "s3:GetObject",
+                        "s3:PutObject",
+                        "s3:ListBucket"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "cloudfront:CreateDistribution",
+                        "cloudfront:CreateFunction",
+                        "cloudfront:UpdateDistribution",
+                        "cloudfront:CreateOriginAccessControl",
+                        "cloudfront:GetFunction",
+                        "cloudfront:PublishFunction",
+                        "cloudfront:DescribeFunction",
+                        "cloudfront:CreateDistribution",
+                        "cloudfront:CreateFunction",
+                        "cloudfront:UpdateDistribution",
+                        "cloudfront:CreateOriginAccessControl",
+                        "cloudfront:GetOriginAccessControl",
+                        "cloudfront:GetOriginAccessControlConfig",
+                        "cloudfront:GetFunction",
+                        "cloudfront:PublishFunction",
+                        "cloudfront:DescribeFunction",
+                        "cloudfront:TagResource",
+                        "cloudfront:CreateDistribution",
+                        "cloudfront:GetDistribution",
+                        "cloudfront:UpdateDistribution",
+                        "cloudfront:GetDistributionConfig",
+                        "cloudfront:ListDistributions",
+                        "cloudfront:TagResource",
+                        "cloudfront:CreateOriginAccessControl",
+                        "cloudfront:GetOriginAccessControl",
+                        "cloudfront:GetOriginAccessControlConfig",
+                        "cloudfront:ListOriginAccessControls",
+                        "cloudfront:CreateFunction",
+                        "cloudfront:GetFunction",
+                        "cloudfront:UpdateFunction",
+                        "cloudfront:PublishFunction",
+                        "cloudfront:DescribeFunction"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "iam:CreateRole",
+                        "iam:PutRolePolicy",
+                        "iam:CreatePolicy",
+                        "iam:AttachRolePolicy",
+                        "iam:PassRole",
+                        "iam:GetRole",
+                        "iam:GetPolicy",
+                        "iam:getRolePolicy"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "cognito-idp:CreateUserPool",
+                        "cognito-idp:CreateUserPoolClient",
+                        "cognito-idp:AdminCreateUser",
+                        "cognito-idp:TagResource",
+                        "cognito-idp:DescribeUserPool",
+                        "cognito-idp:AdminGetUser",
+                        "cognito-idp:DescribeUserPoolClient"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "apigateway:POST",
+                        "apigateway:GET",
+                        "apigateway:PUT",
+                        "apigateway:PATCH"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "lambda:CreateFunction",
+                        "lambda:GetFunction",
+                        "lambda:AddPermission",
+                        "lambda:PublishLayerVersion",
+                        "lambda:GetLayerVersion"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dsql:DbConnectAdmin",
+                        "dsql:CreateCluster",
+                        "dsql:TagResource"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Action": [
+                        "iam:CreatePolicy",
+                        "iam:CreateRole"
+                      ],
+                      "Resource": "*",
+                      "Effect": "Allow"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "logs:DescribeLogGroups"
+                      ],
+                      "Resource": "*"
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "sns:Publish"
+                      ],
+                      "Resource": "*"
+                    }
+                  ]
+                }       
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      #Name: !Sub "${EnvironmentName}-frontend-build"
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: USERNAME
+            Value: !Ref Username
+      Source:
+        Type: GITHUB
+        Location: !Ref GitHubRepositoryUrl
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                nodejs: 20
+      
+            pre_build:
+              commands:
+                - echo Pre-build phase started
+                - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                - unzip -q awscliv2.zip 
+                - sudo ./aws/install --update
+
+            build:
+              commands:
+                - echo Build phase started
+                - aws --version
+                - sh setup.sh ${USERNAME}
+                
+            post_build:
+              commands:
+                - echo Post-build phase started
+                
+     
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codebuild:StartBuild'
+                  - 'codebuild:BatchGetBuilds'
+                Resource: !GetAtt CodeBuildProject.Arn
+
+  StartCodeBuildFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 900  # 15 minutes, adjust based on your build time
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import time
+          import json
+          
+          def handler(event, context):
+              # Extract parameters
+              props = event['ResourceProperties']
+              project_name = props['ProjectName']
+              
+              # Initialize CodeBuild client
+              codebuild = boto3.client('codebuild')
+              response_data = {}
+              
+              try:
+                  if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                      # Start build
+                      print(f"Starting CodeBuild project: {project_name}")
+                      build = codebuild.start_build(projectName=project_name)
+                      build_id = build['build']['id']
+                      
+                      print(f"Build started with ID: {build_id}")
+                      response_data['BuildId'] = build_id
+                      
+                      # Poll until build completes or timeout
+                      status = 'IN_PROGRESS'
+                      while status == 'IN_PROGRESS':
+                          time.sleep(30)  # Wait 30 seconds between checks
+                          build_status = codebuild.batch_get_builds(ids=[build_id])
+                          status = build_status['builds'][0]['buildStatus']
+                          print(f"Current build status: {status}")
+                          
+                          # Check for timeout (context.get_remaining_time_in_millis() <= 30000)
+                          if context.get_remaining_time_in_millis() <= 60000:  # 60 seconds remaining
+                              print("Lambda is about to timeout. Reporting success anyway.")
+                              break
+                      
+                      if status == 'SUCCEEDED':
+                          print("Build completed successfully")
+                          response_data['Status'] = 'SUCCESS'
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                      else:
+                          print(f"Build failed or didn't complete: {status}")
+                          response_data['Status'] = status
+                          cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+                  
+                  elif event['RequestType'] == 'Delete':
+                      # Nothing to do on delete
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+              
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  response_data['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+
+  BuildFrontendCustomResource:
+    Type: Custom::BuildFrontend
+    DependsOn: 
+      - CodeBuildProject
+    Properties:
+      ServiceToken: !GetAtt StartCodeBuildFunction.Arn
+      ProjectName: !Ref CodeBuildProject
+

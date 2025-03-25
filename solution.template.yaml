@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template'
+Description: 'CloudFormation template to deploy a Metadata Management Solution'
 
 Parameters:
   Username:
@@ -20,6 +20,14 @@ Parameters:
       Type: String
       Description: DSQLClusterId
   
+
+
+######################################################################
+########
+########   ----------------- Section 1 : Amazon Aurora DSQL
+########
+######################################################################
+
 
 
 ######################################################################
