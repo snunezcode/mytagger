@@ -53,7 +53,8 @@ Resources:
                               "s3:PutObject",
                               "s3:ListBucket",
                               "s3:PutEncryptionConfiguration",
-                              "s3:PutLifecycleConfiguration"
+                              "s3:PutLifecycleConfiguration",
+                              "s3:DeleteObject"
                           ],
                           "Resource": "*"
                       },
