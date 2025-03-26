@@ -139,7 +139,9 @@ Resources:
                               "lambda:GetFunction",
                               "lambda:AddPermission",
                               "lambda:PublishLayerVersion",
-                              "lambda:GetLayerVersion"
+                              "lambda:GetLayerVersion",
+                              "lambda:InvokeAsync",
+                              "lambda:InvokeFunction"
                           ],
                           "Resource": "*"
                       },
