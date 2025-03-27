@@ -176,7 +176,10 @@ Resources:
         
                   // Grant IP Access
                   var ip = event.viewer.ip || '';        
-                  var allowIpList = [${CIDRInboundAccess}];
+                  var allowIpList = [
+          - !Ref CIDRInboundAccess
+          - |
+            ];
                   
                   // Check if bypass is enabled ('0.0.0.0' in the list) or if IP is in the allowed list
                   var bypassEnabled = allowIpList.includes('0.0.0.0');
@@ -194,10 +197,11 @@ Resources:
                   }
                   
                   // Return the response to viewers
-                  return response;
-        
+                  return response;      
                   
                 }
+
+
       FunctionConfig:
         Comment: !Join
           - ''
