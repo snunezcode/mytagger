@@ -14,8 +14,8 @@ Parameters:
           
   CIDRInboundAccess:
     Type: String
-    Description: Specify CIDR inbound access rule (0.0.0.0)
-    Default: 0.0.0.0
+    Description: Specify CIDR inbound access rule ex. '192.168.1.1','192.168.1.2'
+    Default: "'192.168.1.1','192.168.1.2'"
 
 Resources: 
   CodeBuildServiceRole:
@@ -226,8 +226,7 @@ Resources:
               commands:
                 - echo Build phase started
                 - aws --version
-                - #sh setup.sh ${USERNAME} ${CIDR}
-                - sh setup.sh ${USERNAME}
+                - sh setup.sh ${USERNAME} ${CIDR}
                 
             post_build:
               commands:

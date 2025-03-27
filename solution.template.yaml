@@ -21,10 +21,10 @@ Parameters:
       Description: DSQLClusterId
   
 
-#  CIDRInboundAccess:
-#      Type: String
-#      Description: CIDRInboundAccess
-#      Default : "0.0.0.0"
+  CIDRInboundAccess:
+      Type: String
+      Description: CIDRInboundAccess
+      Default : "'192.168.1.1','192.168.1.2'"
 
 
 ######################################################################
@@ -176,7 +176,7 @@ Resources:
         
                   // Grant IP Access
                   var ip = event.viewer.ip || '';        
-                  var allowIpList = ['129.222.64.91', '2605:59c8:731d:4810:8c19:aeab:6a51:8d76', '0.0.0.0'];
+                  var allowIpList = [${CIDRInboundAccess}];
                   
                   // Check if bypass is enabled ('0.0.0.0' in the list) or if IP is in the allowed list
                   var bypassEnabled = allowIpList.includes('0.0.0.0');
