@@ -226,7 +226,8 @@ Resources:
               commands:
                 - echo Build phase started
                 - aws --version
-                - sh setup.sh ${USERNAME} ${CIDR}
+                - #sh setup.sh ${USERNAME} ${CIDR}
+                - sh setup.sh ${USERNAME}
                 
             post_build:
               commands:
