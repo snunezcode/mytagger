@@ -106,7 +106,8 @@ Resources:
                               "iam:PassRole",
                               "iam:GetRole",
                               "iam:GetPolicy",
-                              "iam:getRolePolicy"
+                              "iam:getRolePolicy",
+                              "iam:CreateServiceLinkedRole"
                           ],
                           "Resource": "*"
                       },

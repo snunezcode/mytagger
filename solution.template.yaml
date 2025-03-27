@@ -168,8 +168,30 @@ Resources:
                   headers['x-content-type-options'] = { value: 'nosniff'};
                   headers['x-frame-options'] = {value: 'DENY'};
                   headers['x-xss-protection'] = {value: '1; mode=block'};
+        
+                  // Grant IP Access
+                  var ip = event.viewer.ip || '';        
+                  var allowIpList = ['129.222.64.91', '2605:59c8:731d:4810:8c19:aeab:6a51:8d76', '0.0.0.0'];
+                  
+                  // Check if bypass is enabled ('0.0.0.0' in the list) or if IP is in the allowed list
+                  var bypassEnabled = allowIpList.includes('0.0.0.0');
+                  var ipSpecificallyAllowed = allowIpList.includes(ip);
+                  
+                  // Allow access if bypass is enabled OR the specific IP is allowed
+                  var shouldAllowIP = bypassEnabled || ipSpecificallyAllowed;
+                  
+                  if (!shouldAllowIP) {
+                      response.statusCode = 403;
+                      // Optionally set a custom forbidden page content
+                      response.statusDescription = 'Forbidden';
+                      headers['content-type'] = { value: 'text/plain' };
+                      response.body = 'Access denied: IP not allowed';
+                  }
+                  
                   // Return the response to viewers
                   return response;
+        
+                  
                 }
       FunctionConfig:
         Comment: !Join
