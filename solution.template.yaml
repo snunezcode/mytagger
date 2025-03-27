@@ -22,7 +22,7 @@ Parameters:
   
 
   CIDRInboundAccess:
-      Type: String
+      Type: List
       Description: CIDRInboundAccess
       Default : "'192.168.1.1','192.168.1.2'"
 
