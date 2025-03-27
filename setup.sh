@@ -1,6 +1,6 @@
 #!/bin/bash 
 username=$1
-cidr=$2
+cidr="$2"
 id=$(date '+%H%M%S')
 start_time=$(date +%s)
 
