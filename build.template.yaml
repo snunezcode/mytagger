@@ -12,7 +12,11 @@ Parameters:
     Description: Username
     Default: mail@example.com
           
-    
+  CIDRInboundAccess:
+    Type: String
+    Description: Specify CIDR inbound access rule (0.0.0.0)
+    Default: 0.0.0.0
+
 Resources: 
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -199,6 +203,8 @@ Resources:
         EnvironmentVariables:
           - Name: USERNAME
             Value: !Ref Username
+          - Name: CIDR
+            Value: !Ref CIDRInboundAccess
       Source:
         Type: GITHUB
         Location: !Ref GitHubRepositoryUrl
@@ -220,7 +226,7 @@ Resources:
               commands:
                 - echo Build phase started
                 - aws --version
-                - sh setup.sh ${USERNAME}
+                - sh setup.sh ${USERNAME} ${CIDR}
                 
             post_build:
               commands:

@@ -21,6 +21,10 @@ Parameters:
       Description: DSQLClusterId
   
 
+  CIDRInboundAccess:
+      Type: String
+      Description: CIDRInboundAccess
+
 
 ######################################################################
 ########
