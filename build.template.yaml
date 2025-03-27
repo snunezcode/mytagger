@@ -15,7 +15,7 @@ Parameters:
   CIDRInboundAccess:
     Type: String
     Description: Specify CIDR inbound access rule ex. '192.168.1.1','192.168.1.2'
-    Default: "'192.168.1.1','192.168.1.2'"
+    Default: "192.168.1.1"
 
 Resources: 
   CodeBuildServiceRole:
