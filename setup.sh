@@ -1,6 +1,7 @@
 #!/bin/bash 
 username=$1
-cidr="$2"
+IPv4CIDRInboundAccess="$2"
+IPv6CIDRInboundAccess="$3"
 id=$(date '+%H%M%S')
 start_time=$(date +%s)
 
@@ -42,7 +43,7 @@ aws s3 cp artifacts/layers/. s3://$stack_name-$id/layers/ --recursive
 #######
 
 echo -e "\n|--#### (3/7) - Creating AWS Resources  ...\n\n"
-aws cloudformation create-stack --stack-name "$stack_name-$id" --parameters ParameterKey=Username,ParameterValue=$username ParameterKey=S3Artifacts,ParameterValue=$stack_name-$id ParameterKey=DSQLCluster,ParameterValue=$dsql_cluster_endpoint ParameterKey=DSQLClusterId,ParameterValue=$dsql_cluster_identifier ParameterKey=CIDRInboundAccess,ParameterValue="$cidr"  --template-body file://$template_frontend --region us-east-1 --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name "$stack_name-$id" --parameters ParameterKey=Username,ParameterValue=$username ParameterKey=S3Artifacts,ParameterValue=$stack_name-$id ParameterKey=DSQLCluster,ParameterValue=$dsql_cluster_endpoint ParameterKey=DSQLClusterId,ParameterValue=$dsql_cluster_identifier ParameterKey=IPv4CIDRInboundAccess,ParameterValue="$IPv4CIDRInboundAccess" ParameterKey=IPv6CIDRInboundAccess,ParameterValue="$IPv6CIDRInboundAccess"  --template-body file://$template_frontend --region us-east-1 --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation wait stack-create-complete --stack-name "$stack_name-$id" --region us-east-1
 
 

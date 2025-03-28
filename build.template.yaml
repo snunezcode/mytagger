@@ -12,10 +12,15 @@ Parameters:
     Description: Username
     Default: mail@example.com
           
-  CIDRInboundAccess:
+  IPv4CIDRInboundAccess:
     Type: String
-    Description: Specify CIDR inbound access rule ex. '192.168.1.1','192.168.1.2'
-    Default: "192.168.1.1"
+    Description: Specify IPv4 CIDR inbound access rule ex. 192.168.1.0/24
+    Default: "192.168.1.0/24"
+
+  IPv6CIDRInboundAccess:
+    Type: String
+    Description: Specify IPv6 CIDR inbound access rule ex. 2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128
+    Default: "12605:59c8:731d:4810:d070:24e9:3c7b:fb43/128"
 
 Resources: 
   CodeBuildServiceRole:
@@ -220,8 +225,10 @@ Resources:
         EnvironmentVariables:
           - Name: USERNAME
             Value: !Ref Username
-          - Name: CIDR
-            Value: !Ref CIDRInboundAccess
+          - Name: IPv4CIDRInboundAccess
+            Value: !Ref IPv4CIDRInboundAccess
+          - Name: IPv6CIDRInboundAccess
+            Value: !Ref IPv6CIDRInboundAccess
       Source:
         Type: GITHUB
         Location: !Ref GitHubRepositoryUrl
@@ -243,7 +250,7 @@ Resources:
               commands:
                 - echo Build phase started
                 - aws --version
-                - sh setup.sh ${USERNAME} ${CIDR}
+                - sh setup.sh ${USERNAME} ${IPv4CIDRInboundAccess} ${IPv6CIDRInboundAccess}
                 
             post_build:
               commands:

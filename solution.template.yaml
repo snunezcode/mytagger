@@ -20,11 +20,15 @@ Parameters:
       Type: String
       Description: DSQLClusterId
   
+  IPv4CIDRInboundAccess:
+    Type: String
+    Description: Specify IPv4 CIDR inbound access rule ex. 192.168.1.0/24
+    Default: "192.168.1.0/24"
 
-  CIDRInboundAccess:
-      Type: String
-      Description: CIDRInboundAccess
-      Default : "'192.168.1.1','192.168.1.2'"
+  IPv6CIDRInboundAccess:
+    Type: String
+    Description: Specify IPv6 CIDR inbound access rule ex. 2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128
+    Default: "12605:59c8:731d:4810:d070:24e9:3c7b:fb43/128"
 
 
 ######################################################################
@@ -51,7 +55,7 @@ Resources:
       Scope: CLOUDFRONT
       IPAddressVersion: IPV4
       Addresses:
-        - 192.168.1.1/24
+        - !Ref IPv4CIDRInboundAccess
 
   AllowedIPv6Set:
     Type: AWS::WAFv2::IPSet
@@ -61,7 +65,7 @@ Resources:
       Scope: CLOUDFRONT
       IPAddressVersion: IPV6
       Addresses:
-        - ::/0
+        - $Ref IPv6CIDRInboundAccess
 
   # Create the WAF WebACL
   CloudFrontWebACL:
