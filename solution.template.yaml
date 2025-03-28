@@ -28,7 +28,7 @@ Parameters:
   IPv6CIDRInboundAccess:
     Type: String
     Description: Specify IPv6 CIDR inbound access rule ex. 2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128
-    Default: "12605:59c8:731d:4810:d070:24e9:3c7b:fb43/128"
+    Default: "2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128"
 
 
 ######################################################################
