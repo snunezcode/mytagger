@@ -101,6 +101,23 @@ Resources:
                           "Resource": "*"
                       },
                       {
+                        "Effect": "Allow",
+                        "Action": [
+                          "wafv2:CreateWebACL",
+                          "wafv2:CreateIPSet",
+                          "wafv2:GetWebACL",
+                          "wafv2:GetIPSet",
+                          "wafv2:UpdateWebACL",
+                          "wafv2:UpdateIPSet",
+                          "wafv2:ListWebACLs",
+                          "wafv2:ListIPSets",
+                          "wafv2:TagResource",
+                          "wafv2:ListTagsForResource",
+                          "wafv2:AssociateWebACL"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
                           "Effect": "Allow",
                           "Action": [
                               "iam:CreateRole",

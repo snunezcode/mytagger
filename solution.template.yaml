@@ -43,6 +43,65 @@ Parameters:
 
 Resources:
 
+  AllowedIPv4Set:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: AllowedIPv4Set
+      Description: IPv4 addresses allowed to access the CloudFront distribution
+      Scope: CLOUDFRONT
+      IPAddressVersion: IPV4
+      Addresses:
+        - 192.168.1.1/24
+
+  AllowedIPv6Set:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: AllowedIPv6Set
+      Description: IPv6 addresses allowed to access the CloudFront distribution
+      Scope: CLOUDFRONT
+      IPAddressVersion: IPV6
+      Addresses:
+        - ::/0
+
+  # Create the WAF WebACL
+  CloudFrontWebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: CloudFrontIPRestrictionACL
+      Scope: CLOUDFRONT
+      Description: Web ACL for CloudFront IP Restrictions
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: CloudFrontIPRestrictionACL
+      Rules:
+        - Name: AllowIPv4Rule
+          Priority: 0
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AllowIPv4Rule
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt AllowedIPv4Set.Arn
+        
+        - Name: AllowIPv6Rule
+          Priority: 1
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AllowIPv6Rule
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt AllowedIPv6Set.Arn
+
+
   S3BucketFrontendApp:
     Type: AWS::S3::Bucket
     UpdateReplacePolicy: Retain
@@ -109,6 +168,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        WebACLId: !GetAtt CloudFrontWebACL.Arn
         CustomErrorResponses:
           - ErrorCachingMinTTL: 10
             ErrorCode: 403
