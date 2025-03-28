@@ -65,7 +65,7 @@ Resources:
       Scope: CLOUDFRONT
       IPAddressVersion: IPV6
       Addresses:
-        - $Ref IPv6CIDRInboundAccess
+        - !Ref IPv6CIDRInboundAccess
 
   # Create the WAF WebACL
   CloudFrontWebACL:
