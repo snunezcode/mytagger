@@ -142,7 +142,8 @@ Resources:
                           "Action": [
                               "dsql:DbConnectAdmin",
                               "dsql:CreateCluster",
-                              "dsql:TagResource"
+                              "dsql:TagResource",
+                              "dsql:GetCluster"
                           ],
                           "Resource": "*"
                       },
@@ -190,8 +191,16 @@ Resources:
                               "ecr:CompleteLayerUpload",
                               "ecr:PutImage"
                           ],
-                          "Resource": "arn:aws:ecr:*:*:ecr-private-apprunner-deployment/*"
-                      }
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "apprunner:CreateService"
+                          ],
+                          "Resource": "*"
+                      },
+                      
                   ]
                 }
 
