@@ -6,21 +6,22 @@ Parameters:
     Type: String
     Description: GitHub repository URL (https format)
     Default : https://github.com/aws-samples/metadata-management-solution.git
-    
-  Username:
+   
+  AppUser:
     Type: String
-    Description: Username
-    Default: mail@example.com
-          
-  IPv4CIDRInboundAccess:
-    Type: String
-    Description: Specify IPv4 CIDR inbound access rule ex. 192.168.1.0/24
-    Default: "192.168.1.0/24"
+    Description: Application User (mail@example.com)
+    Default : mail@example.com
 
-  IPv6CIDRInboundAccess:
+  IPv4CIDR:
     Type: String
-    Description: Specify IPv6 CIDR inbound access rule ex. 2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128
-    Default: "2605:59c8:731d:4810:d070:24e9:3c7b:fb43/128"
+    Description: InboundAccessIPv4 (192.168.1.0/24)
+    Default : "192.168.1.0/24"
+
+  IPv6CIDR:
+    Type: String
+    Description: InboundAccessIPv6 (2605:59c8:731d:4810:415:bd81:f251:f260/128)
+    Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
+
 
 Resources: 
   CodeBuildServiceRole:
@@ -66,45 +67,7 @@ Resources:
                               "s3:DeleteObject"
                           ],
                           "Resource": "*"
-                      },
-                      {
-                          "Effect": "Allow",
-                          "Action": [
-                              "cloudfront:CreateDistribution",
-                              "cloudfront:CreateFunction",
-                              "cloudfront:UpdateDistribution",
-                              "cloudfront:CreateOriginAccessControl",
-                              "cloudfront:GetFunction",
-                              "cloudfront:PublishFunction",
-                              "cloudfront:DescribeFunction",
-                              "cloudfront:CreateDistribution",
-                              "cloudfront:CreateFunction",
-                              "cloudfront:UpdateDistribution",
-                              "cloudfront:CreateOriginAccessControl",
-                              "cloudfront:GetOriginAccessControl",
-                              "cloudfront:GetOriginAccessControlConfig",
-                              "cloudfront:GetFunction",
-                              "cloudfront:PublishFunction",
-                              "cloudfront:DescribeFunction",
-                              "cloudfront:TagResource",
-                              "cloudfront:CreateDistribution",
-                              "cloudfront:GetDistribution",
-                              "cloudfront:UpdateDistribution",
-                              "cloudfront:GetDistributionConfig",
-                              "cloudfront:ListDistributions",
-                              "cloudfront:TagResource",
-                              "cloudfront:CreateOriginAccessControl",
-                              "cloudfront:GetOriginAccessControl",
-                              "cloudfront:GetOriginAccessControlConfig",
-                              "cloudfront:ListOriginAccessControls",
-                              "cloudfront:CreateFunction",
-                              "cloudfront:GetFunction",
-                              "cloudfront:UpdateFunction",
-                              "cloudfront:PublishFunction",
-                              "cloudfront:DescribeFunction"
-                          ],
-                          "Resource": "*"
-                      },
+                      },                      
                       {
                         "Effect": "Allow",
                         "Action": [
@@ -206,6 +169,27 @@ Resources:
                               "sns:Publish"
                           ],
                           "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:CreateRepository",
+                              "ecr:GetAuthorizationToken"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:BatchCheckLayerAvailability",
+                              "ecr:GetDownloadUrlForLayer",
+                              "ecr:BatchGetImage",
+                              "ecr:InitiateLayerUpload",
+                              "ecr:UploadLayerPart",
+                              "ecr:CompleteLayerUpload",
+                              "ecr:PutImage"
+                          ],
+                          "Resource": "arn:aws:ecr:*:*:ecr-private-apprunner-deployment/*"
                       }
                   ]
                 }
@@ -223,12 +207,17 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
         PrivilegedMode: true
         EnvironmentVariables:
-          - Name: USERNAME
-            Value: !Ref Username
-          - Name: IPv4CIDRInboundAccess
-            Value: !Ref IPv4CIDRInboundAccess
-          - Name: IPv6CIDRInboundAccess
-            Value: !Ref IPv6CIDRInboundAccess
+          - Name: AppUser
+            Value: !Ref AppUser
+          - Name: IPv4CIDR
+            Value: !Ref IPv4CIDR
+          - Name: IPv6CIDR
+            Value: !Ref IPv6CIDR
+          - Name: AwsRegion
+            Value: !Ref AWS::Region
+          - Name: AppId
+            Value: "mtdt-mng"
+
       Source:
         Type: GITHUB
         Location: !Ref GitHubRepositoryUrl
@@ -242,15 +231,34 @@ Resources:
             pre_build:
               commands:
                 - echo Pre-build phase started
+                - sudo yum install -y docker
+                - sudo service docker start
                 - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 - unzip -q awscliv2.zip 
                 - sudo ./aws/install --update
+                - cat > variables.env << EOF
+                  #!/bin/sh
+                  export APP_ID="${AppId}"
+                  export APP_USER="${AppUser}"
+                  export IDENTIFIER=$(date '+%H%M%S')
+                  export AWS_REGION="${AwsRegion}"  
+                  export ACCESSIBILITY="PUBLIC"  
+                  export IPV4_CIDR="${IPv4CIDR}"
+                  export IPV6_CIDR="${IPv6CIDR}"
+                  export BUILD_PATH="/tmp/deployment/build"
+                  export ECR_REPO_NAME="ecr-private-apprunner-deployment"
+                  export STACK_ID="$APP_ID-$IDENTIFIER"                  
+                  EOF
+                - cat variables.env
+                
+
 
             build:
               commands:
                 - echo Build phase started
                 - aws --version
-                - sh setup.sh ${USERNAME} ${IPv4CIDRInboundAccess} ${IPv6CIDRInboundAccess}
+                - sh setup.backend.sh
+                - sh setup.frontend.sh
                 
             post_build:
               commands:
