@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#source variables.env
+source ./variables.env
 
 set -e
 

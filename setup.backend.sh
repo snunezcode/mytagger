@@ -5,7 +5,7 @@
 ####### STEP 1 - Load configuration
 #######
 
-#source variables.env
+source ./variables.env
 
 
 start_time=$(date +%s)

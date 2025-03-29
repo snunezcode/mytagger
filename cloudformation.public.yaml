@@ -256,10 +256,7 @@ Resources:
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
                   export STACK_ID="$APP_ID-$IDENTIFIER"                  
                   EOF
-                - cat variables.env
-                - pwd
-                - ls -la
-                - source variables.env
+                - cat variables.env                
                 - sh setup.backend.sh
                 - sh setup.frontend.sh
                 
