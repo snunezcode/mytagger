@@ -204,7 +204,7 @@ Resources:
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:5.0
+        Image: aws/codebuild/amazonlinux-x86_64-standard:5.0
         PrivilegedMode: true
         EnvironmentVariables:
           - Name: AppUser
@@ -227,16 +227,23 @@ Resources:
             install:
               runtime-versions:
                 nodejs: 20
-      
-            pre_build:
               commands:
-                - echo Pre-build phase started
                 - sudo yum install -y docker
-                - sudo service docker start
                 - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 - unzip -q awscliv2.zip 
                 - sudo ./aws/install --update
-                - cat > variables.env << EOF
+                
+                    
+            pre_build:
+              commands:
+                - aws --version
+                
+
+            build:
+              commands:
+                - echo Build phase started              
+                - |
+                  cat > variables.env << EOF
                   #!/bin/sh
                   export APP_ID="${AppId}"
                   export APP_USER="${AppUser}"
@@ -250,13 +257,9 @@ Resources:
                   export STACK_ID="$APP_ID-$IDENTIFIER"                  
                   EOF
                 - cat variables.env
-                
-
-
-            build:
-              commands:
-                - echo Build phase started
-                - aws --version
+                - pwd
+                - ls -la
+                - source variables.env
                 - sh setup.backend.sh
                 - sh setup.frontend.sh
                 
