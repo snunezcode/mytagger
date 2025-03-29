@@ -29,6 +29,7 @@ Parameters:
 ########
 ######################################################################
 
+Resources:
   IAMRoleCognito:
       Type: "AWS::IAM::Role"
       Properties:

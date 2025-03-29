@@ -64,7 +64,8 @@ Resources:
                               "s3:ListBucket",
                               "s3:PutEncryptionConfiguration",
                               "s3:PutLifecycleConfiguration",
-                              "s3:DeleteObject"
+                              "s3:DeleteObject",
+                              "s3:DeleteBucket"
                           ],
                           "Resource": "*"
                       },                      
@@ -217,6 +218,10 @@ Resources:
             Value: !Ref AWS::Region
           - Name: AppId
             Value: "mtdt-mng"
+          - Name: Identifier
+            Value: !Join [ "", ["", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          
+          
 
       Source:
         Type: GITHUB
@@ -247,14 +252,14 @@ Resources:
                   #!/bin/sh
                   export APP_ID="${AppId}"
                   export APP_USER="${AppUser}"
-                  export IDENTIFIER=$(date '+%H%M%S')
+                  export IDENTIFIER="${Identifier}"
                   export AWS_REGION="${AwsRegion}"  
                   export ACCESSIBILITY="PUBLIC"  
                   export IPV4_CIDR="${IPv4CIDR}"
                   export IPV6_CIDR="${IPv6CIDR}"
                   export BUILD_PATH="/tmp/deployment/build"
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
-                  export STACK_ID="$APP_ID-$IDENTIFIER"                  
+                  export STACK_ID="${AppId}-${Identifier}"                  
                   EOF
                 - cat variables.env                
                 - sh setup.backend.sh
