@@ -35,7 +35,7 @@ Resources:
               Service: codebuild.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: "LambdaPolicy"
+        - PolicyName: "CodeBuildPolicy"
           PolicyDocument: !Sub |
                 {
                   "Version": "2012-10-17",
@@ -270,7 +270,7 @@ Resources:
 
             build:
               commands:
-                - echo Build phase started                            
+                - echo Build phase started                    
                 - |
                   cat > variables.env << EOF
                   #!/bin/sh
@@ -285,8 +285,10 @@ Resources:
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
                   export STACK_ID="${AppId}-${Identifier}"                  
                   EOF
-                - cat variables.env                
-                - sh setup.backend.sh
+                - cat variables.env           
+                - mkdir -p /tmp/deployment/build/                        
+                - echo "<html><h1>Up and Running!</h1></html>"     > /tmp/deployment/build/index.html                       
+                - #sh setup.backend.sh
                 - sh setup.frontend.sh
                 
             post_build:

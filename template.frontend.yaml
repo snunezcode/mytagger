@@ -92,9 +92,46 @@ Resources:
             Principal:
               Service: 'build.apprunner.amazonaws.com'
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess'
-#        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+      Policies:
+        - PolicyName: "AppRunnerdPolicy"
+          PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ecr:GetDownloadUrlForLayer",
+                          "ecr:BatchGetImage",
+                          "ecr:DescribeImages",
+                          "ecr:GetAuthorizationToken",
+                          "ecr:BatchCheckLayerAvailability"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                          "Sid": "AssociateWebACL1",
+                          "Effect": "Allow",
+                          "Action": [
+                              "wafv2:AssociateWebACL"
+                          ],
+                          "Resource": [
+                              "arn:aws:wafv2:${AWS::Region}:${AWS::AccountId}:regional/webacl/*/*"
+                          ]
+                      },
+                      {
+                          "Sid": "AssociateWebACL2",
+                          "Effect": "Allow",
+                          "Action": [
+                              "apprunner:AssociateWebAcl"
+                          ],
+                          "Resource": [
+                              "arn:aws:apprunner:*:${AWS::AccountId}:service/*/*"
+                          ]
+                      }                                       
+                  ]
+                }
+
 
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
@@ -117,12 +154,12 @@ Resources:
         IngressConfiguration:
           IsPubliclyAccessible: true
 
-#  WebACLAssociation:
-#    Type: 'AWS::WAFv2::WebACLAssociation'
-#    DependsOn: AppRunnerService
-#    Properties:
-#      ResourceArn: !GetAtt AppRunnerService.ServiceArn
-#      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
+  WebACLAssociation:
+    Type: 'AWS::WAFv2::WebACLAssociation'
+    DependsOn: AppRunnerService
+    Properties:
+      ResourceArn: !GetAtt AppRunnerService.ServiceArn
+      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
 
 Outputs:
   AppRunnerServiceURL:
