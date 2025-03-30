@@ -26,23 +26,14 @@ aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --
 
 # Create a temporary nginix.conf
 
-cat > nginx.conf << EOF
+cat > server.conf << EOF
 server {
     listen 80;
+    root   /usr/share/nginx/html;
+    index  index.html index.htm;    
     location / {
-      root   /usr/share/nginx/html;
-      index  index.html index.htm;
-      try_files $uri $uri/ /index.html;
-    } 
-    error_page 404 /index.html;
-    location = / {
-      root /usr/share/nginx/html;
-      internal;
-    }
-    error_page   500 502 503 504  /50x.html;
-    location = /50x.html {
-      root   /usr/share/nginx/html;
-    }
+          try_files $uri /index.html;
+    }       
   }
 EOF
 
@@ -53,7 +44,7 @@ RUN dnf update -y && \
     dnf install -y nginx procps shadow-utils && \
     dnf clean all
 
-COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY ./server.conf /etc/nginx/conf.d/
 
 RUN rm -rf /usr/share/nginx/html/*
 COPY ./build/ /usr/share/nginx/html/
