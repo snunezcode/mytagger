@@ -119,7 +119,7 @@ Resources:
                           "wafv2:DisassociateWebACL",
                           "wafv2:GetWebACL",
                           "wafv2:GetWebACLForResource",
-                          "wafv2:*",
+                          "wafv2:*"
                         ],
                         "Resource": "*"
                       },
