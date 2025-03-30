@@ -14,12 +14,12 @@ Parameters:
 
   IPv4CIDR:
     Type: String
-    Description: InboundAccessIPv4 (192.168.1.0/24)
+    Description: AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)
     Default : "192.168.1.0/24"
 
   IPv6CIDR:
     Type: String
-    Description: InboundAccessIPv6 (2605:59c8:731d:4810:415:bd81:f251:f260/128)
+    Description: AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)
     Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
 
 
@@ -225,7 +225,7 @@ Resources:
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      #Name: !Sub "${EnvironmentName}-frontend-build"
+      Name: !Join [ "-", ["mtdt-mng-codebuild", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
         Type: NO_ARTIFACTS

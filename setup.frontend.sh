@@ -24,15 +24,37 @@ ECR_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_N
 echo "--## Logging into AWS ECR : $ECR_REPO_URI"
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
+# Create a temporary nginix.conf
 
-echo "--## Creating Dockerfile"
+cat > nginx.conf << EOF
+server {
+    listen 80;
+    location / {
+      root   /usr/share/nginx/html;
+      index  index.html index.htm;
+      try_files $uri $uri/ /index.html;
+    } 
+    error_page 404 /index.html;
+    location = / {
+      root /usr/share/nginx/html;
+      internal;
+    }
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+      root   /usr/share/nginx/html;
+    }
+  }
+EOF
+
 # Create a temporary Dockerfile
 cat > Dockerfile << EOF
-
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023
 RUN dnf update -y && \
     dnf install -y nginx procps shadow-utils && \
     dnf clean all
+
+RUN rm /etc/nginx/conf.d/default.conf  
+COPY nginx.conf /etc/nginx/conf.d
 
 RUN rm -rf /usr/share/nginx/html/*
 COPY ./build/ /usr/share/nginx/html/
