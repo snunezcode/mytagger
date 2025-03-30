@@ -270,7 +270,7 @@ Resources:
 
             build:
               commands:
-                - echo Build phase started              
+                - echo Build phase started                            
                 - |
                   cat > variables.env << EOF
                   #!/bin/sh
