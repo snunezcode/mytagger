@@ -95,6 +95,20 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess'
 
+AppRunnerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess'
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
     DependsOn: AppRunnerWAFWebACL

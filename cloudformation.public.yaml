@@ -203,6 +203,18 @@ Resources:
                               "apprunner:DescribeService"
                           ],
                           "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:PassRole"
+                          ],
+                          "Resource": "*",
+                          "Condition": {
+                              "StringLike": {
+                                  "iam:PassedToService": "apprunner.amazonaws.com"
+                              }
+                          }
                       }                      
                   ]
                 }
