@@ -290,8 +290,8 @@ Resources:
                   EOF
                 - cat variables.env           
                 - mkdir -p /tmp/deployment/build/                        
-                - echo "<html><h1>Up and Running!</h1></html>"     > /tmp/deployment/build/index.html                       
-                - #sh setup.backend.sh
+                - echo "<html><h1>AWS App Runner - Up and Running!</h1></html>" > /tmp/deployment/build/index.html
+                - sh setup.backend.sh
                 - sh setup.frontend.sh
                 
             post_build:
