@@ -34,6 +34,8 @@ Resources:
             Principal:
               Service: codebuild.amazonaws.com
             Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
       Policies:
         - PolicyName: "CodeBuildPolicy"
           PolicyDocument: !Sub |
@@ -200,7 +202,8 @@ Resources:
                           "Effect": "Allow",
                           "Action": [
                               "apprunner:CreateService",
-                              "apprunner:DescribeService"
+                              "apprunner:DescribeService",
+                              "apprunner:AssociateWebAcl"
                           ],
                           "Resource": "*"
                       },

@@ -110,28 +110,6 @@ Resources:
                           "ecr:BatchCheckLayerAvailability"
                         ],
                         "Resource": "*"
-                      },
-                      {
-                        "Sid": "WAFv2Permissions",
-                        "Effect": "Allow",
-                        "Action": [
-                          "wafv2:AssociateWebACL",
-                          "wafv2:DisassociateWebACL",
-                          "wafv2:GetWebACL",
-                          "wafv2:GetWebACLForResource",
-                          "wafv2:*"
-                        ],
-                        "Resource": "*"
-                      },
-                      {
-                        "Sid": "AppRunnerWAFPermissions",
-                        "Effect": "Allow",
-                        "Action": [
-                          "apprunner:AssociateWebAcl",
-                          "apprunner:DisassociateWebAcl",
-                          "apprunner:ListServices"
-                        ],
-                        "Resource": ["arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:service/*/*"]                          
                       }
                     ]
                   }
