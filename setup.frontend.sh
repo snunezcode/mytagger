@@ -26,17 +26,6 @@ aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --
 
 # Create a temporary nginix.conf
 
-cat > server.conf << EOF
-server {
-    listen 80;
-    root   /usr/share/nginx/html;
-    index  index.html index.htm;    
-    location / {
-          try_files $uri /index.html;
-    }       
-  }
-EOF
-
 # Create a temporary Dockerfile
 cat > Dockerfile << EOF
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023
