@@ -107,7 +107,7 @@ AppRunnerInstanceRole:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess'
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+#        - 'arn:aws:iam::aws:policy/AdministratorAccess'
 
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
@@ -130,12 +130,12 @@ AppRunnerInstanceRole:
         IngressConfiguration:
           IsPubliclyAccessible: true
 
-  WebACLAssociation:
-    Type: 'AWS::WAFv2::WebACLAssociation'
-    DependsOn: AppRunnerService
-    Properties:
-      ResourceArn: !GetAtt AppRunnerService.ServiceArn
-      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
+#  WebACLAssociation:
+#    Type: 'AWS::WAFv2::WebACLAssociation'
+#    DependsOn: AppRunnerService
+#    Properties:
+#      ResourceArn: !GetAtt AppRunnerService.ServiceArn
+#      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
 
 Outputs:
   AppRunnerServiceURL:
