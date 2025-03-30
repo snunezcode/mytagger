@@ -90,14 +90,16 @@ Resources:
         Statement:
           - Effect: 'Allow'
             Principal:
-              Service: 'build.apprunner.amazonaws.com'
+              Service: 
+                - 'build.apprunner.amazonaws.com'
+                - 'wafv2.amazonaws.com'
             Action: 'sts:AssumeRole'
       Policies:
         - PolicyName: "AppRunnerdPolicy"
           PolicyDocument: !Sub |
-                {
-                  "Version": "2012-10-17",
-                  "Statement": [
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
                       {
                         "Effect": "Allow",
                         "Action": [
@@ -110,27 +112,30 @@ Resources:
                         "Resource": "*"
                       },
                       {
-                          "Sid": "AssociateWebACL1",
-                          "Effect": "Allow",
-                          "Action": [
-                              "wafv2:AssociateWebACL"
-                          ],
-                          "Resource": [
-                              "arn:aws:wafv2:${AWS::Region}:${AWS::AccountId}:regional/webacl/*/*"
-                          ]
+                        "Sid": "WAFv2Permissions",
+                        "Effect": "Allow",
+                        "Action": [
+                          "wafv2:AssociateWebACL",
+                          "wafv2:DisassociateWebACL",
+                          "wafv2:GetWebACL",
+                          "wafv2:GetWebACLForResource"
+                        ],
+                        "Resource": "*"
                       },
                       {
-                          "Sid": "AssociateWebACL2",
-                          "Effect": "Allow",
-                          "Action": [
-                              "apprunner:AssociateWebAcl"
-                          ],
-                          "Resource": [
-                              "arn:aws:apprunner:*:${AWS::AccountId}:service/*/*"
-                          ]
-                      }                                       
-                  ]
-                }
+                        "Sid": "AppRunnerWAFPermissions",
+                        "Effect": "Allow",
+                        "Action": [
+                          "apprunner:AssociateWebAcl",
+                          "apprunner:DisassociateWebAcl",
+                          "apprunner:ListServices"
+                        ],
+                        "Resource": {
+                          "Fn::Sub": "arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:service/*/*"
+                        }
+                      }
+                    ]
+                  }
 
 
   AppRunnerService:
