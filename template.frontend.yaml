@@ -130,9 +130,7 @@ Resources:
                           "apprunner:DisassociateWebAcl",
                           "apprunner:ListServices"
                         ],
-                        "Resource": {
-                          "Fn::Sub": "arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:service/*/*"
-                        }
+                        "Resource": ["arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:service/*/*"]                          
                       }
                     ]
                   }
