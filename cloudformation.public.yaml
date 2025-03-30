@@ -82,7 +82,8 @@ Resources:
                           "wafv2:ListIPSets",
                           "wafv2:TagResource",
                           "wafv2:ListTagsForResource",
-                          "wafv2:AssociateWebACL"
+                          "wafv2:AssociateWebACL",
+                          "wafv2:GetWebACLForResource"
                         ],
                         "Resource": "*"
                       },
