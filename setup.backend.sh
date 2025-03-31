@@ -77,8 +77,14 @@ mkdir -p $BUILD_PATH
 
 pwd
 ls -la
-cd frontend/ && npm install && npm run build && cp -r  build/* $BUILD_PATH/ && cd .. 
-aws s3 cp  modules/. s3://$CF_OUT_S3PluginBucket/ --recursive 
+cd frontend
+npm install 
+npm run build
+ls -la
+cp -r  ./build/* $BUILD_PATH/ 
+cd .. 
+
+aws s3 cp  ./modules/. s3://$CF_OUT_S3PluginBucket/ --recursive 
 aws s3 ls s3://$CF_OUT_S3PluginBucket/
 
 
