@@ -21,7 +21,8 @@ ECR_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_N
 echo "--## Logging into AWS ECR : $ECR_REPO_URI"
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-# Create a temporary nginix.conf
+
+ln -s $BUILD_PATH build
 
 # Create a temporary Dockerfile
 cat > Dockerfile << EOF
@@ -33,7 +34,7 @@ RUN dnf update -y && \
 COPY ./server.conf /etc/nginx/conf.d/
 
 RUN rm -rf /usr/share/nginx/html/*
-COPY $BUILD_PATH/* /usr/share/nginx/html/
+COPY ./build/ /usr/share/nginx/html/
 EXPOSE 80
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
 EOF
