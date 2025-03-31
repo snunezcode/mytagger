@@ -73,13 +73,19 @@ cat << EOF > frontend/src/pages/Api.js
 export const api = { "url" : "$CF_OUT_ApiURL" };
 EOF
 
-mkdir -p build
 pwd
+rm -rf build
 ls -la
 cd frontend
 npm install 
 npm run build
+echo -e "\n Frontend directory \n\n"
+pwd
+ls -la
+
 cd .. 
+echo -e "\n Deployment directory \n\n"
+pwd
 ls -la
 
 aws s3 cp  ./modules/. s3://$CF_OUT_S3PluginBucket/ --recursive 
