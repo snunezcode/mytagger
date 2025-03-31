@@ -13,6 +13,8 @@ rm -rf build
 mkdir build
 cp -r $BUILD_PATH/*  build/
 
+ls -la build/
+
 
 echo "--## Creating AWS ECR repository: $ECR_REPO_NAME"
 aws ecr create-repository --repository-name $ECR_REPO_NAME --region $AWS_REGION || echo "Repository already exists"
