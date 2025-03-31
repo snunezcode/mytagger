@@ -8,7 +8,9 @@ set -e
 IMAGE_TAG="$APP_ID"
 
 echo "--## Listing build directory"
-ls -la $BUILD_PATH/
+mkdir build
+cp -r $BUILD_PATH/* build/
+ls -la build
 
 
 echo "--## Creating AWS ECR repository: $ECR_REPO_NAME"
@@ -22,7 +24,7 @@ echo "--## Logging into AWS ECR : $ECR_REPO_URI"
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
 
-ln -s $BUILD_PATH build
+
 
 # Create a temporary Dockerfile
 cat > Dockerfile << EOF
