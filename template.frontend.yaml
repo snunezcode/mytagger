@@ -119,7 +119,7 @@ Resources:
     Type: 'AWS::AppRunner::Service'
     DependsOn: AppRunnerWAFWebACL
     Properties:
-      ServiceName: !Sub '${StackID}-apprunner-service'
+      ServiceName: !Sub '${StackID}-apprunner'
       SourceConfiguration:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
