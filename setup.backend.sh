@@ -84,8 +84,6 @@ aws s3 cp  ./modules/. s3://$CF_OUT_S3PluginBucket/ --recursive
 
 echo -e "\n Listing the artifacts locations ...\n\n"
 aws s3 ls s3://$CF_OUT_S3PluginBucket/
-ls -la $BUILD_PATH/ 
-
 
 
 #######

@@ -33,7 +33,7 @@ RUN dnf update -y && \
 COPY ./server.conf /etc/nginx/conf.d/
 
 RUN rm -rf /usr/share/nginx/html/*
-COPY $BUILD_PATH/ /usr/share/nginx/html/
+COPY $BUILD_PATH/* /usr/share/nginx/html/
 EXPOSE 80
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
 EOF
