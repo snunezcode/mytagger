@@ -73,8 +73,7 @@ cat << EOF > frontend/src/pages/Api.js
 export const api = { "url" : "$CF_OUT_ApiURL" };
 EOF
 
-mkdir -p $BUILD_PATH
-
+mkdir -p build
 pwd
 ls -la
 cd frontend
@@ -82,13 +81,12 @@ npm install
 npm run build
 cd .. 
 ls -la
-cp -r  ./build/* $BUILD_PATH/ 
 
 aws s3 cp  ./modules/. s3://$CF_OUT_S3PluginBucket/ --recursive 
 
 echo -e "\n Listing the artifacts locations ...\n\n"
 aws s3 ls s3://$CF_OUT_S3PluginBucket/
-ls -la $BUILD_PATH/ 
+ls -la build/ 
 
 
 

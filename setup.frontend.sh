@@ -7,12 +7,7 @@ set -e
 # Variables
 IMAGE_TAG="$APP_ID"
 
-echo "--## Copying build directory"
-mkdir -p $BUILD_PATH  
-rm -rf build
-mkdir build
-cp -r $BUILD_PATH/*  build/
-
+echo "--## Listing build directory"
 ls -la build/
 
 

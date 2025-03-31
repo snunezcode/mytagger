@@ -246,7 +246,7 @@ Resources:
           - Name: AppId
             Value: "mtdt-mng"
           - Name: Identifier
-            Value: !Join [ "", ["", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+            Value: !Join [ "-", [!Ref AWS::AccountId, !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
           
           
 
