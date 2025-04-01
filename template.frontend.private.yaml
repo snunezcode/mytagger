@@ -64,15 +64,27 @@ Resources:
         - Key: Name
           Value: !Sub '${StackID}-apprunner-sg'
 
-  # VPC Connector for App Runner
-  AppRunnerVpcConnector:
-    Type: AWS::AppRunner::VpcConnector
+  AppRunnerVpcEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
     Properties:
-      VpcConnectorName: !Sub '${StackID}-vpc-connector'
-      Subnets: 
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
+      VpcId: !Ref VpcId
+      VpcEndpointType: Interface
+      SubnetIds: 
         - !Ref SubnetId
-      SecurityGroups:
+      SecurityGroupIds:
         - !Ref AppRunnerSecurityGroup
+      PrivateDnsEnabled: false
+
+  # VPC Connector for App Runner
+  #AppRunnerVpcConnector:
+  #  Type: AWS::AppRunner::VpcConnector
+  #  Properties:
+  #    VpcConnectorName: !Sub '${StackID}-vpc-connector'
+  #    Subnets: 
+  #      - !Ref SubnetId
+  #    SecurityGroups:
+  #      - !Ref AppRunnerSecurityGroup
 
   AppRunnerAccessRole:
     Type: 'AWS::IAM::Role'
@@ -109,7 +121,7 @@ Resources:
 
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
-    DependsOn: AppRunnerVpcConnector
+    DependsOn: AppRunnerVpcEndpoint
     Properties:
       ServiceName: !Sub '${StackID}-apprunner'
       SourceConfiguration:
@@ -124,9 +136,9 @@ Resources:
       InstanceConfiguration:
         Cpu: '1 vCPU'
         Memory: '2 GB'
-      NetworkConfiguration:
+      NetworkConfiguration:        
         EgressConfiguration:
-          EgressType: 'VPC'
+          EgressType: 'DEFAULT'
           VpcConnectorArn: !GetAtt AppRunnerVpcConnector.VpcConnectorArn
         IngressConfiguration:
           IsPubliclyAccessible: false
