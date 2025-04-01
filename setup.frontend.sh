@@ -66,8 +66,15 @@ if [ $ACCESSIBILITY == "PUBLIC" ]
 then
 aws cloudformation create-stack \
   --stack-name "$STACK_ID-frontend" \
-  --template-body file://template.frontend.yaml \
+  --template-body file://template.frontend.public.yaml \
   --parameters ParameterKey=StackID,ParameterValue="$STACK_ID" ParameterKey=DockerImage,ParameterValue=$DOCKER_IMAGE ParameterKey=AllowedIPv4CIDR,ParameterValue=$IPV4_CIDR  ParameterKey=AllowedIPv6CIDR,ParameterValue=$IPV6_CIDR \
+  --capabilities CAPABILITY_IAM \
+  --region $AWS_REGION
+else
+  aws cloudformation create-stack \
+  --stack-name "$STACK_ID-frontend" \
+  --template-body file://template.frontend.private.yaml \
+  --parameters ParameterKey=StackID,ParameterValue="$STACK_ID" ParameterKey=DockerImage,ParameterValue=$DOCKER_IMAGE ParameterKey=AllowedIPv4CIDR,ParameterValue=$IPV4_CIDR  ParameterKey=AllowedIPv6CIDR,ParameterValue=$IPV6_CIDR ParameterKey=VPCId,ParameterValue=$VPC_ID ParameterKey=SubnetId,ParameterValue=$SUBNET_ID \
   --capabilities CAPABILITY_IAM \
   --region $AWS_REGION
 fi

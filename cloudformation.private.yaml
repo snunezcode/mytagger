@@ -1,0 +1,407 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to build a Metadata Management Solution'
+
+Parameters:
+  GitHubRepositoryUrl:
+    Type: String
+    Description: GitHub repository URL (https format)
+    Default : https://github.com/aws-samples/metadata-management-solution.git
+   
+  AppUser:
+    Type: String
+    Description: Application User (mail@example.com)
+    Default : mail@example.com
+
+  IPv4CIDR:
+    Type: String
+    Description: AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)
+    Default : "192.168.1.0/24"
+
+  IPv6CIDR:
+    Type: String
+    Description: AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)
+    Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
+
+  VPCId:
+      Type: AWS::EC2::VPC::Id
+      Description: 'VPC ID where the App Runner service will be deployed'
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'Subnet ID for the App Runner VPC Connector'
+
+Resources: 
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+      Policies:
+        - PolicyName: "CodeBuildPolicy"
+          PolicyDocument: !Sub |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cloudformation:CreateStack",
+                              "cloudformation:DescribeStacks",
+                              "cloudformation:UpdateStack",
+                              "cloudformation:DeleteStack",
+                              "cloudformation:GetTemplate"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "s3:CreateBucket",
+                              "s3:PutBucketPolicy",
+                              "s3:PutBucketVersioning",
+                              "s3:PutBucketPublicAccessBlock",
+                              "s3:PutBucketOwnershipControls",
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:ListBucket",
+                              "s3:PutEncryptionConfiguration",
+                              "s3:PutLifecycleConfiguration",
+                              "s3:DeleteObject",
+                              "s3:DeleteBucket"
+                          ],
+                          "Resource": "*"
+                      },                                            
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:CreateRole",
+                              "iam:PutRolePolicy",
+                              "iam:CreatePolicy",
+                              "iam:AttachRolePolicy",
+                              "iam:PassRole",
+                              "iam:GetRole",
+                              "iam:GetPolicy",
+                              "iam:getRolePolicy",
+                              "iam:CreateServiceLinkedRole"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "cognito-idp:CreateUserPool",
+                              "cognito-idp:CreateUserPoolClient",
+                              "cognito-idp:AdminCreateUser",
+                              "cognito-idp:TagResource",
+                              "cognito-idp:DescribeUserPool",
+                              "cognito-idp:AdminGetUser",
+                              "cognito-idp:DescribeUserPoolClient"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "apigateway:POST",
+                              "apigateway:GET",
+                              "apigateway:PUT",
+                              "apigateway:PATCH"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "lambda:CreateFunction",
+                              "lambda:GetFunction",
+                              "lambda:AddPermission",
+                              "lambda:PublishLayerVersion",
+                              "lambda:GetLayerVersion",
+                              "lambda:InvokeAsync",
+                              "lambda:InvokeFunction"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "dsql:DbConnectAdmin",
+                              "dsql:CreateCluster",
+                              "dsql:TagResource",
+                              "dsql:GetCluster"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Action": [
+                              "iam:CreatePolicy",
+                              "iam:CreateRole"
+                          ],
+                          "Resource": "*",
+                          "Effect": "Allow"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "logs:CreateLogGroup",
+                              "logs:CreateLogStream",
+                              "logs:PutLogEvents",
+                              "logs:DescribeLogGroups"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "sns:Publish"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:CreateRepository",
+                              "ecr:GetAuthorizationToken"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "ecr:BatchCheckLayerAvailability",
+                              "ecr:GetDownloadUrlForLayer",
+                              "ecr:BatchGetImage",
+                              "ecr:InitiateLayerUpload",
+                              "ecr:UploadLayerPart",
+                              "ecr:CompleteLayerUpload",
+                              "ecr:PutImage"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              ""apprunner:CreateService",
+                              "apprunner:DeleteService",
+                              "apprunner:DescribeService",
+                              "apprunner:UpdateService",
+                              "apprunner:ListServices",
+                              "apprunner:CreateVpcConnector",
+                              "apprunner:DeleteVpcConnector",
+                              "apprunner:DescribeVpcConnector",
+                              "apprunner:ListVpcConnectors"
+                          ],
+                          "Resource": "*"
+                      },
+                      {
+                          "Effect": "Allow",
+                          "Action": [
+                              "iam:PassRole"
+                          ],
+                          "Resource": "*",
+                          "Condition": {
+                              "StringLike": {
+                                  "iam:PassedToService": "apprunner.amazonaws.com"
+                              }
+                          }
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ec2:CreateSecurityGroup",
+                          "ec2:DeleteSecurityGroup",
+                          "ec2:DescribeSecurityGroups",
+                          "ec2:AuthorizeSecurityGroupIngress",
+                          "ec2:RevokeSecurityGroupIngress",
+                          "ec2:DescribeVpcs",
+                          "ec2:DescribeSubnets"
+                        ],
+                        "Resource": "*"
+                      }                      
+                  ]
+                }
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Join [ "-", ["mtdt-mng-codebuild", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux-x86_64-standard:5.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AppUser
+            Value: !Ref AppUser
+          - Name: IPv4CIDR
+            Value: !Ref IPv4CIDR
+          - Name: IPv6CIDR
+            Value: !Ref IPv6CIDR
+          - Name: AwsRegion
+            Value: !Ref AWS::Region
+          - Name: AppId
+            Value: "mtdt-mng"
+          - Name: Identifier
+            Value: !Join [ "-", [!Ref AWS::AccountId, !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          - Name: VPCId
+            Value: !Ref VPCId
+          - Name: SubnetId
+            Value: !Ref SubnetId
+          
+          
+
+      Source:
+        Type: GITHUB
+        Location: !Ref GitHubRepositoryUrl
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                nodejs: 20
+              commands:
+                - sudo yum install -y docker
+                - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+                - unzip -q awscliv2.zip 
+                - sudo ./aws/install --update
+                
+                    
+            pre_build:
+              commands:
+                - aws --version
+                
+
+            build:
+              commands:
+                - echo Build phase started                    
+                - |
+                  cat > variables.env << EOF
+                  #!/bin/sh
+                  export APP_ID="${AppId}"
+                  export APP_USER="${AppUser}"
+                  export IDENTIFIER="${Identifier}"
+                  export AWS_REGION="${AwsRegion}"  
+                  export ACCESSIBILITY="PRIVATE"  
+                  export IPV4_CIDR="${IPv4CIDR}"
+                  export IPV6_CIDR="${IPv6CIDR}"
+                  export VPC_ID="${VPCId}"
+                  export SUBNET_ID="${SubnetId}"
+                  export BUILD_PATH="/tmp/deployment/build"
+                  export ECR_REPO_NAME="ecr-private-apprunner-deployment"
+                  export STACK_ID="${AppId}-${Identifier}"                  
+                  EOF
+                - cat variables.env                         
+                - sh setup.backend.sh
+                - sh setup.frontend.sh
+                
+            post_build:
+              commands:
+                - echo Post-build phase started
+                
+     
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'codebuild:StartBuild'
+                  - 'codebuild:BatchGetBuilds'
+                Resource: !GetAtt CodeBuildProject.Arn
+
+  StartCodeBuildFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 900  # 15 minutes, adjust based on your build time
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import time
+          import json
+          
+          def handler(event, context):
+              # Extract parameters
+              props = event['ResourceProperties']
+              project_name = props['ProjectName']
+              
+              # Initialize CodeBuild client
+              codebuild = boto3.client('codebuild')
+              response_data = {}
+              
+              try:
+                  if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                      # Start build
+                      print(f"Starting CodeBuild project: {project_name}")
+                      build = codebuild.start_build(projectName=project_name)
+                      build_id = build['build']['id']
+                      
+                      print(f"Build started with ID: {build_id}")
+                      response_data['BuildId'] = build_id
+                      
+                      # Poll until build completes or timeout
+                      status = 'IN_PROGRESS'
+                      while status == 'IN_PROGRESS':
+                          time.sleep(30)  # Wait 30 seconds between checks
+                          build_status = codebuild.batch_get_builds(ids=[build_id])
+                          status = build_status['builds'][0]['buildStatus']
+                          print(f"Current build status: {status}")
+                          
+                          # Check for timeout (context.get_remaining_time_in_millis() <= 30000)
+                          if context.get_remaining_time_in_millis() <= 60000:  # 60 seconds remaining
+                              print("Lambda is about to timeout. Reporting success anyway.")
+                              break
+                      
+                      if status == 'SUCCEEDED':
+                          print("Build completed successfully")
+                          response_data['Status'] = 'SUCCESS'
+                          cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+                      else:
+                          print(f"Build failed or didn't complete: {status}")
+                          response_data['Status'] = status
+                          cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+                  
+                  elif event['RequestType'] == 'Delete':
+                      # Nothing to do on delete
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+              
+              except Exception as e:
+                  print(f"Error: {str(e)}")
+                  response_data['Error'] = str(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
+
+  BuildFrontendCustomResource:
+    Type: Custom::BuildFrontend
+    DependsOn: 
+      - CodeBuildProject
+    Properties:
+      ServiceToken: !GetAtt StartCodeBuildFunction.Arn
+      ProjectName: !Ref CodeBuildProject
+
