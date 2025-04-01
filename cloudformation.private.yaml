@@ -196,7 +196,11 @@ Resources:
                               "apprunner:CreateVpcConnector",
                               "apprunner:DeleteVpcConnector",
                               "apprunner:DescribeVpcConnector",
-                              "apprunner:ListVpcConnectors"
+                              "apprunner:ListVpcConnectors",
+                              "apprunner:ListVpcIngressConnections",
+                              "apprunner:DescribeVpcIngressConnection",
+                              "apprunner:CreateVpcIngressConnection",
+                              "apprunner:DeleteVpcIngressConnection"
                           ],
                           "Resource": "*"
                       },
