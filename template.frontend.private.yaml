@@ -68,7 +68,7 @@ Resources:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
       ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
-      VpcId: !Ref VpcId
+      VpcId: !Ref VPCId
       VpcEndpointType: Interface
       SubnetIds: 
         - !Ref SubnetId
