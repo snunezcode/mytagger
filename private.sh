@@ -15,6 +15,6 @@ export SUBNET_ID="subnet-03bff4b2b43b0d393"
 
 aws cloudformation create-stack \
   --stack-name "build-private-$IDENTIFIER" \
-  --template-body file://cloudformation.public.yaml \
+  --template-body file://cloudformation.private.yaml \
   --parameters ParameterKey=GitHubRepositoryUrl,ParameterValue=$GITHUB_REPO ParameterKey=AppUser,ParameterValue=$APP_USER ParameterKey=IPv4CIDR,ParameterValue=$IPV4_CIDR ParameterKey=IPv6CIDR,ParameterValue=$IPV6_CIDR ParameterKey=VPCId,ParameterValue=$VPC_ID ParameterKey=SubnetId,ParameterValue=$SUBNET_ID --capabilities CAPABILITY_IAM
  

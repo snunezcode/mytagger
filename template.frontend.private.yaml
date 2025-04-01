@@ -108,7 +108,7 @@ Resources:
 
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
-    DependsOn: AppRunnerWAFWebACL
+    DependsOn: AppRunnerVpcConnector
     Properties:
       ServiceName: !Sub '${StackID}-apprunner'
       SourceConfiguration:

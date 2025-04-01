@@ -188,7 +188,7 @@ Resources:
                       {
                           "Effect": "Allow",
                           "Action": [
-                              ""apprunner:CreateService",
+                              "apprunner:CreateService",
                               "apprunner:DeleteService",
                               "apprunner:DescribeService",
                               "apprunner:UpdateService",
