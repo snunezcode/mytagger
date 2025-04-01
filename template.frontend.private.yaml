@@ -137,19 +137,12 @@ Resources:
         Cpu: '1 vCPU'
         Memory: '2 GB'
       NetworkConfiguration:        
-        EgressConfiguration:
-          EgressType: 'DEFAULT'
-          VpcConnectorArn: !GetAtt AppRunnerVpcConnector.VpcConnectorArn
         IngressConfiguration:
           IsPubliclyAccessible: false
 
   
-Outputs:
-  AppRunnerServiceURL:
-    Description: 'URL of the App Runner service'
-    Value: !GetAtt AppRunnerService.ServiceUrl
+#Outputs:
+#  AppRunnerServiceURL:
+#    Description: 'URL of the App Runner service'
+#    Value: !GetAtt AppRunnerService.ServiceUrl
 
-Outputs:
-  AppRunnerServiceURL:    
-    Description: 'Endpoint of the App Runner service (accessible only within VPC)'
-    Value: !Sub '${AppRunnerService.ServiceId}.${AWS::Region}.awsapprunner.com'
