@@ -148,7 +148,7 @@ Resources:
       IngressVpcConfiguration:
         VpcEndpointId: !Ref AppRunnerVpcEndpoint
         VpcId: !Ref VPCId
-      ServiceArn: !GetAtt AppRunnerService.Arn
+      ServiceArn: !GetAtt AppRunnerService.ServiceArn
       VpcIngressConnectionName: !Sub '${StackID}-connection'
   
 #Outputs:
