@@ -149,7 +149,7 @@ Resources:
         VpcEndpointId: !Ref AppRunnerVpcEndpoint
         VpcId: !Ref VPCId
       ServiceArn: !GetAtt AppRunnerService.Arn
-      VpcIngressConnectionName: !Sub '${StackID}-ingress-connection'
+      VpcIngressConnectionName: !Sub '${StackID}-connection'
   
 #Outputs:
 #  AppRunnerServiceURL:
