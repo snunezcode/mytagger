@@ -142,7 +142,7 @@ Resources:
         IngressConfiguration:
           IsPubliclyAccessible: false
 
- AppRunnerVpcIngressConnection
+  AppRunnerVpcIngressConnection:
     Type: AWS::AppRunner::VpcIngressConnection
     Properties:
       IngressVpcConfiguration:
