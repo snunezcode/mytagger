@@ -69,7 +69,8 @@ Resources:
     Type: AWS::AppRunner::VpcConnector
     Properties:
       VpcConnectorName: !Sub '${StackID}-vpc-connector'
-      Subnets: !Ref SubnetId
+      Subnets: 
+        - !Ref SubnetId
       SecurityGroups:
         - !Ref AppRunnerSecurityGroup
 
