@@ -40,8 +40,8 @@ mkdir python
 pip3.11 --version
 pip3.11 install psycopg2-binary -t python/
 pip3.11 install boto3 -t python/
-zip -r layers/lambda.layer.zip python/
-ls -la layers/
+zip -q -r layers/lambda.layer.zip python/
+ls -lha layers/
 cd ..
 
 aws s3 mb s3://$STACK_ID
