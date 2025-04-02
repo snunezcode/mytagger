@@ -6,7 +6,7 @@ export const configuration =
         "refresh-interval": 5*1000,      
         "api-url" : api["url"],          
         "release" : "0.1.0",
-        "application-title": "Metadata Management Solution",
+        "application-title": "Tagger Solution",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",
     },
     "colors": {
