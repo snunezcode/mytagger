@@ -25,12 +25,21 @@ dsql_cluster_endpoint="$dsql_cluster_identifier.dsql.us-east-1.on.aws"
 ####### STEP 3 - Creating artifacts
 #######
 
+
+
 echo -e "\n|--#### (2/7) - Creating artifacts ...\n\n"
 mkdir -p artifacts/functions
 cd artifacts/lambda.api/ && zip -r ../functions/lambda.api.zip lambda_function.py && cd ../../
 cd artifacts/lambda.discovery/ && zip -r ../functions/lambda.discovery.zip lambda_function.py  && cd ../../
 cd artifacts/lambda.tagger/ && zip -r ../functions/lambda.tagger.zip lambda_function.py  && cd ../../
 cd artifacts/lambda.initdb/ && zip -r ../functions/lambda.initdb.zip lambda_function.py  && cd ../../
+
+mkdir layers
+mkdir python
+pip3.11 --version
+pip3.11 install psycopg2-binary -t python/
+pip3.11 install boto3 -t python/
+zip -r layers/lambda.layer.zip python/
 
 
 aws s3 mb s3://$STACK_ID

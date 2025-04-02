@@ -83,9 +83,8 @@ fi
 
 aws cloudformation wait stack-create-complete --stack-name "$STACK_ID-frontend" --region $AWS_REGION
 
-export $(aws cloudformation describe-stacks --stack-name "$STACK_ID-frontend" --output text --query 'Stacks[0].Outputs[].join(`=`, [join(`_`, [`CF`, `OUT`, OutputKey]), OutputValue ])' --region us-east-1)
-
-echo "----------------------------------------------------------------"
-echo "AWS App Runner URL: $CF_OUT_AppRunnerServiceURL"
-echo "----------------------------------------------------------------"
-export AppRunnerServiceURL=$CF_OUT_AppRunnerServiceURL
+#export $(aws cloudformation describe-stacks --stack-name "$STACK_ID-frontend" --output text --query 'Stacks[0].Outputs[].join(`=`, [join(`_`, [`CF`, `OUT`, OutputKey]), OutputValue ])' --region us-east-1)
+#echo "----------------------------------------------------------------"
+#echo "AWS App Runner URL: $CF_OUT_AppRunnerServiceURL"
+#echo "----------------------------------------------------------------"
+#export AppRunnerServiceURL=$CF_OUT_AppRunnerServiceURL

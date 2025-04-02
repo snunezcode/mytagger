@@ -151,8 +151,8 @@ Resources:
       ServiceArn: !GetAtt AppRunnerService.ServiceArn
       VpcIngressConnectionName: !Sub '${StackID}-connection'
   
-Outputs:
-  AppRunnerServiceURL:
-    Description: 'URL of the App Runner service'
-    Value: !GetAtt AppRunnerService.ServiceUrl
+#Outputs:
+#  AppRunnerServiceURL:
+#    Description: 'URL of the App Runner service'
+#    Value: !GetAtt AppRunnerService.ServiceUrl
 
