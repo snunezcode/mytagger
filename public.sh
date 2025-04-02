@@ -6,8 +6,8 @@
 
 export IDENTIFIER=$(date '+%H%M%S')
 export APP_USER="snmatus@amazon.com"
-export IPV4_CIDR="148.222.132.51/32"
-export IPV6_CIDR="2605:59c8:731d:4810:415:bd81:f251:f260/128"
+export IPV4_CIDR="138.84.54.61/32"
+export IPV6_CIDR="2605:59c8:731d:4810:2cd8:d9a:59f4:888c/128"
 export GITHUB_REPO="https://github.com/snunezcode/mytagger.git"
 
 

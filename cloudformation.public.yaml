@@ -1,29 +1,39 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'CloudFormation template to build frontend for Tagger Solution'
 
-Parameters:
-  GitHubRepositoryUrl:
-    Type: String
-    Description: GitHub repository URL (https format)
-    Default : https://github.com/aws-samples/metadata-management-solution.git
-   
-  AppUser:
-    Type: String
-    Description: Application User (mail@example.com)
-    Default : mail@example.com
-
-  IPv4CIDR:
-    Type: String
-    Description: AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)
-    Default : "192.168.1.0/24"
-
-  IPv6CIDR:
-    Type: String
-    Description: AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)
-    Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:     
+      - 
+        Label: 
+          default: "General Configuration"
+        Parameters:
+          - GitHubRepositoryUrl
+          - AppUser
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters:
+          - IPv4CIDR
+          - IPv6CIDR
+      
+    ParameterLabels:
+      GitHubRepositoryUrl: 
+        default: "GitHub repository URL (https format)."
+      AppUser: 
+        default: "Application User (mail@example.com)."
+      IPv4CIDR: 
+        default: "AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)."
+      IPv6CIDR: 
+        default: "AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)."
 
 
 Resources: 
+
+#######################|-
+#######################|-  CodeBuild Resources
+#######################|-
+
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -34,8 +44,6 @@ Resources:
             Principal:
               Service: codebuild.amazonaws.com
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
       Policies:
         - PolicyName: "CodeBuildPolicy"
           PolicyDocument: !Sub |
@@ -244,9 +252,11 @@ Resources:
           - Name: AwsRegion
             Value: !Ref AWS::Region
           - Name: AppId
-            Value: "mtdt-mng"
+            Value: "tagger"
           - Name: Identifier
             Value: !Join [ "-", [!Ref AWS::AccountId, !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          - Name: StackName
+            Value: !Ref AWS::StackName
           
           
 
@@ -264,6 +274,8 @@ Resources:
                 - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
                 - unzip -q awscliv2.zip 
                 - sudo ./aws/install --update
+                - sudo dnf install python3.11 -y
+                - sudo dnf install python3.11-pip -y
                 
                     
             pre_build:
@@ -281,12 +293,12 @@ Resources:
                   export APP_USER="${AppUser}"
                   export IDENTIFIER="${Identifier}"
                   export AWS_REGION="${AwsRegion}"  
-                  export ACCESSIBILITY="PUBLIC"  
                   export IPV4_CIDR="${IPv4CIDR}"
                   export IPV6_CIDR="${IPv6CIDR}"
                   export BUILD_PATH="/tmp/deployment/build"
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
-                  export STACK_ID="${AppId}-${Identifier}"                  
+                  export STACK_ID="${AppId}-${Identifier}"  
+                  export STACK_NAME="${StackName}"                                  
                   EOF
                 - cat variables.env                         
                 - sh setup.backend.sh
@@ -297,6 +309,9 @@ Resources:
                 - echo Post-build phase started
                 
      
+#######################|-
+#######################|-  Lambda Resources
+#######################|-
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -328,6 +343,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.9
       Timeout: 900  # 15 minutes, adjust based on your build time
+      MemorySize: 4096
       Code:
         ZipFile: |
           import boto3
@@ -393,3 +409,132 @@ Resources:
       ServiceToken: !GetAtt StartCodeBuildFunction.Arn
       ProjectName: !Ref CodeBuildProject
 
+
+
+#######################|-
+#######################|-  App Runner Resources
+#######################|-
+
+
+  AppRunnerWAFWebACL:
+    Type: 'AWS::WAFv2::WebACL'
+    DependsOn: BuildFrontendCustomResource
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      Scope: 'REGIONAL'
+      Description: 'WAF WebACL for App Runner service with IP-based allow rules'
+      DefaultAction:
+        Block: {}
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      Rules:
+        - Name: 'AllowIPv4Rule'
+          Priority: 0
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt IPv4IPSet.Arn
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: 'AllowIPv4Rule'
+        - Name: 'AllowIPv6Rule'
+          Priority: 1
+          Statement:
+            IPSetReferenceStatement:
+              ARN: !GetAtt IPv6IPSet.Arn
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: 'AllowIPv6Rule'
+
+  IPv4IPSet:
+    Type: 'AWS::WAFv2::IPSet'
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"ipv4"]]
+      Description: 'IPv4 addresses allowed to access App Runner service'
+      Scope: 'REGIONAL'
+      IPAddressVersion: 'IPV4'
+      Addresses:
+        - !Ref IPv4CIDR
+
+  IPv6IPSet:
+    Type: 'AWS::WAFv2::IPSet'
+    Properties:
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"ipv6"]]
+      Description: 'IPv6 addresses allowed to access App Runner service'
+      Scope: 'REGIONAL'
+      IPAddressVersion: 'IPV6'
+      Addresses:
+        - !Ref IPv6CIDR
+
+  AppRunnerAccessRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 
+                - 'build.apprunner.amazonaws.com'
+                - 'wafv2.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "AppRunnerdPolicy"
+          PolicyDocument: !Sub |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ecr:GetDownloadUrlForLayer",
+                          "ecr:BatchGetImage",
+                          "ecr:DescribeImages",
+                          "ecr:GetAuthorizationToken",
+                          "ecr:BatchCheckLayerAvailability"
+                        ],
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+
+
+  AppRunnerService:
+    Type: 'AWS::AppRunner::Service'
+    DependsOn: AppRunnerWAFWebACL
+    Properties:
+      ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:tagger'         
+          ImageConfiguration:
+            Port: '80'
+          ImageRepositoryType: 'ECR'
+        AutoDeploymentsEnabled: false
+      InstanceConfiguration:
+        Cpu: '1 vCPU'
+        Memory: '2 GB'
+      NetworkConfiguration:
+        IngressConfiguration:
+          IsPubliclyAccessible: true
+
+  WebACLAssociation:
+    Type: 'AWS::WAFv2::WebACLAssociation'
+    DependsOn: AppRunnerService
+    Properties:
+      ResourceArn: !GetAtt AppRunnerService.ServiceArn
+      WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
+
+Outputs:
+  AppRunnerServiceURL:
+    Description: 'URL of the App Runner service'
+    Value: !GetAtt AppRunnerService.ServiceUrl

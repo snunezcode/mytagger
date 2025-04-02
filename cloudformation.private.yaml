@@ -10,9 +10,6 @@ Metadata:
         Parameters:
           - GitHubRepositoryUrl
           - AppUser
-          - InstanceType
-          - GitHubRepository
-
       - 
         Label: 
           default: "Network Configuration"
@@ -294,10 +291,6 @@ Resources:
             Value: "tagger"
           - Name: Identifier
             Value: !Join [ "-", [!Ref AWS::AccountId, !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
-          - Name: VPCId
-            Value: !Ref VPCId
-          - Name: SubnetId
-            Value: !Ref SubnetId
           - Name: StackName
             Value: !Ref AWS::StackName
 
@@ -337,11 +330,8 @@ Resources:
                   export APP_USER="${AppUser}"
                   export IDENTIFIER="${Identifier}"
                   export AWS_REGION="${AwsRegion}"  
-                  export ACCESSIBILITY="PRIVATE"  
                   export IPV4_CIDR="${IPv4CIDR}"
                   export IPV6_CIDR="${IPv6CIDR}"
-                  export VPC_ID="${VPCId}"
-                  export SUBNET_ID="${SubnetId}"
                   export BUILD_PATH="/tmp/deployment/build"
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
                   export STACK_ID="${AppId}-${Identifier}"                  
