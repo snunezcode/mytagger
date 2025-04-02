@@ -1,38 +1,69 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'CloudFormation template to build frontend for Tagger Solution'
 
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:     
+      - 
+        Label: 
+          default: "General Configuration"
+        Parameters:
+          - GitHubRepositoryUrl
+          - AppUser
+          - InstanceType
+          - GitHubRepository
+
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters:
+          - VPCId
+          - SubnetId
+          - IPv4CIDR
+          - IPv6CIDR
+      
+    ParameterLabels:
+      GitHubRepositoryUrl: 
+        default: "GitHub repository URL (https format)."
+      AppUser: 
+        default: "Application User (mail@example.com)."
+      VPCId: 
+        default: "VPC ID where the App Runner service will be deployed."
+      SubnetId: 
+        default: "Subnet ID for the App Runner VPC Connector."
+      SubnetParam: 
+        default: "Select Subnet for Application Deployment, this subnet needs internet outbound access to reach AWS APIs."
+      IPv4CIDR: 
+        default: "AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)."
+      IPv6CIDR: 
+        default: "AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)."
+
+
 Parameters:
   GitHubRepositoryUrl:
-    Type: String
-    Description: GitHub repository URL (https format)
+    Type: String    
     Default : https://github.com/aws-samples/tagger.git
    
   AppUser:
-    Type: String
-    Description: Application User (mail@example.com)
+    Type: String    
     Default : mail@example.com
 
   IPv4CIDR:
-    Type: String
-    Description: AWS WAF - CIDR InboundAccess IPv4 allow - (ex. 192.168.1.0/24)
+    Type: String    
     Default : "192.168.1.0/24"
 
   IPv6CIDR:
-    Type: String
-    Description: AWS WAF - CIDR InboundAccess IPv6 allow (ex. 2605:59c8:731d:4810:415:bd81:f251:f260/128)
+    Type: String    
     Default : "2605:59c8:731d:4810:415:bd81:f251:f260/128"
 
   VPCId:
       Type: AWS::EC2::VPC::Id
-      Description: 'VPC ID where the App Runner service will be deployed'
 
   SubnetId:
     Type: AWS::EC2::Subnet::Id
-    Description: 'Subnet ID for the App Runner VPC Connector'
+    
 
 Resources: 
-
-
 #######################|-
 #######################|-  CodeBuild Resources
 #######################|-
@@ -267,6 +298,9 @@ Resources:
             Value: !Ref VPCId
           - Name: SubnetId
             Value: !Ref SubnetId
+          - Name: StackName
+            Value: !Ref AWS::StackName
+
           
           
 
@@ -311,6 +345,7 @@ Resources:
                   export BUILD_PATH="/tmp/deployment/build"
                   export ECR_REPO_NAME="ecr-private-apprunner-deployment"
                   export STACK_ID="${AppId}-${Identifier}"                  
+                  export STACK_NAME="${StackName}"                  
                   EOF
                 - cat variables.env                         
                 - sh setup.backend.sh
@@ -441,23 +476,13 @@ Resources:
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref IPv4CIDR 
           Description: 'Allow HTTPS traffic from IPv4'
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIpv6: ::/0
-          Description: 'Allow HTTPS traffic from IPv6'
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-          Description: 'Allow HTTP traffic from IPv4'
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIpv6: ::/0
-          Description: 'Allow HTTP traffic from IPv6'
+          CidrIpv6: !Ref IPv6CIDR
+          Description: 'Allow HTTPS traffic from IPv6'        
       Tags:
         - Key: Name
           Value: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"sg"]]
