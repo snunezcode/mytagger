@@ -76,6 +76,11 @@ export $(aws cloudformation describe-stacks --stack-name "$STACK_ID-backend" --o
 
 echo -e "\n|--#### (5/7) -  Building Frontend Application  ...\n\n"
 
+echo -e "\n|--CognitoUserPool :  $CF_OUT_CognitoUserPool"
+echo -e "\n|--CognitoUserPoolClient :  $CF_OUT_CognitoUserPoolClient"
+echo -e "\n|--ApiURL :  $CF_OUT_ApiURL"
+
+
 cat << EOF > frontend/public/aws-exports.json
 { "aws_region": "$AWS_REGION",  "aws_cognito_user_pool_id": "$CF_OUT_CognitoUserPool",  "aws_cognito_user_pool_web_client_id": "$CF_OUT_CognitoUserPoolClient",  "aws_api_port": 3000,  "aws_token_expiration": 24 }
 EOF
@@ -104,7 +109,7 @@ aws s3 ls s3://$CF_OUT_S3PluginBucket/
 echo -e "\n|--#### (6/7) - Configuring database store  ...\n\n"
 
 aws dsql wait cluster-active  --identifier $dsql_cluster_identifier
-aws lambda invoke --function-name mtdt-mng-lambda-initdb --cli-binary-format raw-in-base64-out --region $CF_OUT_Region response.json
+aws lambda invoke --function-name tagger-mng-lambda-initdb --cli-binary-format raw-in-base64-out --region $CF_OUT_Region response.json
 
 
 
