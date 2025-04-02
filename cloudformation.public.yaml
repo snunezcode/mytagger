@@ -58,6 +58,7 @@ Parameters:
   
 Conditions:
   isWAFRequired: !Equals [ !Ref WAFRequired, true]
+  isNotWAFRequired: !Equals [ !Ref WAFRequired, false]
 
 
 Resources: 
@@ -444,7 +445,7 @@ Resources:
 
 
 #######################|-
-#######################|-  App Runner Resources
+#######################|-  App Runner Resources WITH WAF
 #######################|-
 
 
@@ -509,7 +510,7 @@ Resources:
         - !Ref IPv6CIDR
 
   AppRunnerAccessRole:
-    Type: 'AWS::IAM::Role'
+    Type: 'AWS::IAM::Role'    
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -544,6 +545,7 @@ Resources:
   AppRunnerService:
     Type: 'AWS::AppRunner::Service'
     DependsOn: AppRunnerWAFWebACL
+    Condition: isWAFRequired
     Properties:
       ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
       SourceConfiguration:
@@ -570,7 +572,41 @@ Resources:
       ResourceArn: !GetAtt AppRunnerService.ServiceArn
       WebACLArn: !GetAtt AppRunnerWAFWebACL.Arn
 
+
+#######################|-
+#######################|-  App Runner Resources WITHOUT WAF
+#######################|-
+
+
+  AppRunnerServiceNotWAF:
+    Type: 'AWS::AppRunner::Service'  
+    Condition: isNotWAFRequired
+    Properties:
+      ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]],"apprunner"]]
+      SourceConfiguration:
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:tagger'         
+          ImageConfiguration:
+            Port: '80'
+          ImageRepositoryType: 'ECR'
+        AutoDeploymentsEnabled: false
+      InstanceConfiguration:
+        Cpu: '1 vCPU'
+        Memory: '2 GB'
+      NetworkConfiguration:
+        IngressConfiguration:
+          IsPubliclyAccessible: true
+
+
 Outputs:
-  AppRunnerServiceURL:
+  AppRunnerServiceURLWAF:
     Description: 'URL of the App Runner service'
     Value: !GetAtt AppRunnerService.ServiceUrl
+    Condition: isWAFRequired
+
+  AppRunnerServiceURL:
+    Description: 'URL of the App Runner service'
+    Value: !GetAtt AppRunnerServiceNotWAF.ServiceUrl
+    Condition: isNotWAFRequired

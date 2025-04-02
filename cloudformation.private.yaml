@@ -12,7 +12,7 @@ Metadata:
           - AppUser
       - 
         Label: 
-          default: "Network Configuration"
+          default: "Network and Security Configuration"
         Parameters:
           - VPCId
           - SubnetId
