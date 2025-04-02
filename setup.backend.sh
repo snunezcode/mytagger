@@ -56,7 +56,7 @@ aws s3 cp artifacts/layers/. s3://$STACK_ID/layers/ --recursive
 #######
 
 echo -e "\n|--#### (3/7) - Creating AWS Resources  ...\n\n"
-aws cloudformation create-stack --stack-name "$STACK_ID-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=DSQLCluster,ParameterValue=$dsql_cluster_endpoint ParameterKey=DSQLClusterId,ParameterValue=$dsql_cluster_identifier --template-body file://template.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --stack-name "$STACK_ID-backend" --parameters ParameterKey=Username,ParameterValue=$APP_USER ParameterKey=S3Artifacts,ParameterValue=$STACK_ID ParameterKey=DSQLCluster,ParameterValue=$dsql_cluster_endpoint ParameterKey=DSQLClusterId,ParameterValue=$dsql_cluster_identifier --template-body file://cloudformation.backend.yaml --region $AWS_REGION --capabilities CAPABILITY_NAMED_IAM
 aws cloudformation wait stack-create-complete --stack-name "$STACK_ID-backend" --region $AWS_REGION
 
 

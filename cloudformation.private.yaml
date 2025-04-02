@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template to build a Metadata Management Solution'
+Description: 'CloudFormation template to build Tagger Solution'
 
 Parameters:
   GitHubRepositoryUrl:
     Type: String
     Description: GitHub repository URL (https format)
-    Default : https://github.com/aws-samples/metadata-management-solution.git
+    Default : https://github.com/aws-samples/tagger.git
    
   AppUser:
     Type: String
@@ -31,6 +31,12 @@ Parameters:
     Description: 'Subnet ID for the App Runner VPC Connector'
 
 Resources: 
+
+
+#######################|-
+#######################|-  CodeBuild Resources
+#######################|-
+
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -41,8 +47,8 @@ Resources:
             Principal:
               Service: codebuild.amazonaws.com
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AdministratorAccess'
+      #ManagedPolicyArns:
+      #  - 'arn:aws:iam::aws:policy/AdministratorAccess'
       Policies:
         - PolicyName: "CodeBuildPolicy"
           PolicyDocument: !Sub |
@@ -235,7 +241,7 @@ Resources:
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Join [ "-", ["mtdt-mng-codebuild", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+      Name: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
         Type: NO_ARTIFACTS
@@ -254,7 +260,7 @@ Resources:
           - Name: AwsRegion
             Value: !Ref AWS::Region
           - Name: AppId
-            Value: "mtdt-mng"
+            Value: "tagger"
           - Name: Identifier
             Value: !Join [ "-", [!Ref AWS::AccountId, !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
           - Name: VPCId
@@ -314,6 +320,11 @@ Resources:
               commands:
                 - echo Post-build phase started
                 
+
+
+#######################|-
+#######################|-  Lambda Resources
+#######################|-
      
 
   LambdaExecutionRole:
@@ -346,6 +357,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.9
       Timeout: 900  # 15 minutes, adjust based on your build time
+      MemorySize: 4096
       Code:
         ZipFile: |
           import boto3
@@ -448,7 +460,7 @@ Resources:
           Description: 'Allow HTTP traffic from IPv6'
       Tags:
         - Key: Name
-          Value: !Sub '${StackID}-apprunner-sg'
+          Value: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]],"sg"]
 
   AppRunnerVpcEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
@@ -501,7 +513,7 @@ Resources:
     Type: 'AWS::AppRunner::Service'
     DependsOn: AppRunnerVpcEndpoint
     Properties:
-      ServiceName: !Sub '${StackID}-apprunner'
+      ServiceName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]],"app-runner"]
       SourceConfiguration:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
@@ -525,4 +537,4 @@ Resources:
         VpcEndpointId: !Ref AppRunnerVpcEndpoint
         VpcId: !Ref VPCId
       ServiceArn: !GetAtt AppRunnerService.ServiceArn
-      VpcIngressConnectionName: !Sub '${StackID}-connection'
+      VpcIngressConnectionName: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]],"connection"]

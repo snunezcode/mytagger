@@ -58,31 +58,3 @@ echo "--## Docker image completed."
 echo "----------------------------------------------------------------"
 echo "New Docker image available at: $DOCKER_IMAGE"
 echo "----------------------------------------------------------------"
-
-
-echo "--## Creating AWS App Runner Service"
-
-#if [ $ACCESSIBILITY == "PUBLIC" ]
-#then
-#aws cloudformation create-stack \
-#  --stack-name "$STACK_ID-frontend" \
-#  --template-body file://template.frontend.public.yaml \
-#  --parameters ParameterKey=StackID,ParameterValue="$STACK_ID" ParameterKey=DockerImage,ParameterValue=$DOCKER_IMAGE ParameterKey=AllowedIPv4CIDR,ParameterValue=$IPV4_CIDR  ParameterKey=AllowedIPv6CIDR,ParameterValue=$IPV6_CIDR \
-#  --capabilities CAPABILITY_IAM \
-#  --region $AWS_REGION
-#else
-#  aws cloudformation create-stack \
-#  --stack-name "$STACK_ID-frontend" \
-#  --template-body file://template.frontend.private.yaml \
-#  --parameters ParameterKey=StackID,ParameterValue="$STACK_ID" ParameterKey=DockerImage,ParameterValue=$DOCKER_IMAGE ParameterKey=AllowedIPv4CIDR,ParameterValue=$IPV4_CIDR  ParameterKey=AllowedIPv6CIDR,ParameterValue=$IPV6_CIDR ParameterKey=VPCId,ParameterValue=$VPC_ID ParameterKey=SubnetId,ParameterValue=$SUBNET_ID \
-#  --capabilities CAPABILITY_IAM \
-#  --region $AWS_REGION
-#fi
-
-#aws cloudformation wait stack-create-complete --stack-name "$STACK_ID-frontend" --region $AWS_REGION
-
-#export $(aws cloudformation describe-stacks --stack-name "$STACK_ID-frontend" --output text --query 'Stacks[0].Outputs[].join(`=`, [join(`_`, [`CF`, `OUT`, OutputKey]), OutputValue ])' --region us-east-1)
-#echo "----------------------------------------------------------------"
-#echo "AWS App Runner URL: $CF_OUT_AppRunnerServiceURL"
-#echo "----------------------------------------------------------------"
-#export AppRunnerServiceURL=$CF_OUT_AppRunnerServiceURL
