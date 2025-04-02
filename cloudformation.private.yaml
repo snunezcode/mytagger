@@ -518,7 +518,7 @@ Resources:
         AuthenticationConfiguration:
           AccessRoleArn: !GetAtt AppRunnerAccessRole.Arn
         ImageRepository:
-          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:mtdt-mng'         
+          ImageIdentifier: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ecr-private-apprunner-deployment:tagger'         
           ImageConfiguration:
             Port: '80'
           ImageRepositoryType: 'ECR'
