@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template to deploy a Metadata Management Solution'
+Description: 'CloudFormation template to build backend for Tagger Solution'
 
 Parameters:
   Username:
@@ -34,7 +34,7 @@ Resources:
       Type: "AWS::IAM::Role"
       Properties:
           Path: "/"
-          RoleName: "mtdt-mng-role-coginito"
+          RoleName: "tagger-mng-role-coginito"
           AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cognito-idp.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
           MaxSessionDuration: 3600
           Description: "Allows Cognito to use SMS MFA on your behalf."
@@ -52,7 +52,7 @@ Resources:
   CognitoUserPool:
       Type: "AWS::Cognito::UserPool"
       Properties:
-          UserPoolName: "mtdt-mng-user-pool-cognito"           
+          UserPoolName: "tagger-mng-user-pool-cognito"           
           Policies: 
               PasswordPolicy: 
                   MinimumLength: 8
@@ -89,7 +89,7 @@ Resources:
       Type: "AWS::Cognito::UserPoolClient"
       Properties:
           UserPoolId: !Ref CognitoUserPool
-          ClientName: "mtdt-mng-user-pool-client-cognito"                    
+          ClientName: "tagger-mng-user-pool-client-cognito"                    
           RefreshTokenValidity: 1
           ReadAttributes: 
             - "address"
@@ -166,7 +166,7 @@ Resources:
       UpdateReplacePolicy: Retain
       DeletionPolicy: Retain
       Properties:          
-          BucketName: !Join [ "-", ["mtdt-mng-s3-libraries", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
+          BucketName: !Join [ "-", ["tagger-mng-s3-libraries", !Select [4, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
           BucketEncryption: 
               ServerSideEncryptionConfiguration: 
                 - 
@@ -186,7 +186,7 @@ Resources:
   ApiGatewayRestApi:
       Type: "AWS::ApiGateway::RestApi"
       Properties:
-          Name: "mtdt-mng-api-gateway"
+          Name: "tagger-mng-api-gateway"
           ApiKeySourceType: "HEADER"
           EndpointConfiguration: 
               Types: 
@@ -244,7 +244,7 @@ Resources:
                     - ":"
                     - !Ref AWS::AccountId
                     - ":function:"
-                    - "mtdt-mng-lambda-api"
+                    - "tagger-mng-lambda-api"
                     - "/invocations"
 
 
@@ -304,7 +304,7 @@ Resources:
         - LambdaFunctionApi
       Properties:
         Action: "lambda:InvokeFunction"
-        FunctionName: "mtdt-mng-lambda-api"
+        FunctionName: "tagger-mng-lambda-api"
         Principal: "apigateway.amazonaws.com"
         SourceArn: 
           !Join
@@ -322,7 +322,7 @@ Resources:
       Type: "AWS::IAM::Role"
       Properties:
           Path: "/"
-          RoleName: "mtdt-mng-iam-role-lambda-api"
+          RoleName: "tagger-mng-iam-role-lambda-api"
           AssumeRolePolicyDocument: !Sub |
                     {
                         "Version": "2012-10-17",
@@ -354,7 +354,7 @@ Resources:
                                 "logs:CreateLogStream",
                                 "logs:PutLogEvents"
                             ],
-                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-api:*",
+                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-api:*",
                             "Effect": "Allow"
                         },                      
                         {                            
@@ -372,7 +372,7 @@ Resources:
                                 "lambda:InvokeFunction"
                             ],
                             "Resource": [
-                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:mtdt-mng-lambda-discovery"
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:tagger-mng-lambda-discovery"
                             ]
                         },
                         {                            
@@ -381,7 +381,7 @@ Resources:
                                 "lambda:InvokeFunction"
                             ],
                             "Resource": [
-                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:mtdt-mng-lambda-tagger"
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:tagger-mng-lambda-tagger"
                             ]
                         },
                         {
@@ -405,7 +405,7 @@ Resources:
       Type: "AWS::IAM::Role"
       Properties:
           Path: "/"
-          RoleName: "mtdt-mng-iam-role-lambda-discovery"
+          RoleName: "tagger-mng-iam-role-lambda-discovery"
           AssumeRolePolicyDocument: !Sub |
                     {
                         "Version": "2012-10-17",
@@ -437,7 +437,7 @@ Resources:
                                 "logs:PutLogEvents"
                             ],
                             "Resource": [
-                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-discovery:*"
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-discovery:*"
                             ]
                         },
                         {
@@ -478,7 +478,7 @@ Resources:
       Type: "AWS::IAM::Role"
       Properties:
           Path: "/"
-          RoleName: "mtdt-mng-iam-role-lambda-tagger"
+          RoleName: "tagger-mng-iam-role-lambda-tagger"
           AssumeRolePolicyDocument: !Sub |
                     {
                         "Version": "2012-10-17",
@@ -510,8 +510,8 @@ Resources:
                                   "logs:PutLogEvents"
                               ],
                               "Resource": [
-                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-tagger:*",
-                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mtdt-mng-lambda-initdb:*"
+                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-tagger:*",
+                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-initdb:*"
                               ]
                           },
                           {
@@ -564,7 +564,7 @@ Resources:
               REGION: !Ref AWS::Region
               S3_BUCKET_MODULES : !Ref S3PluginBucket
 
-      FunctionName: "mtdt-mng-lambda-api"
+      FunctionName: "tagger-mng-lambda-api"
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
@@ -598,7 +598,7 @@ Resources:
               S3_BUCKET_MODULES : !Ref S3PluginBucket
               REGION: !Ref AWS::Region
 
-      FunctionName: "mtdt-mng-lambda-discovery"
+      FunctionName: "tagger-mng-lambda-discovery"
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
@@ -632,7 +632,7 @@ Resources:
               S3_BUCKET_MODULES : !Ref S3PluginBucket
               REGION: !Ref AWS::Region
 
-      FunctionName: "mtdt-mng-lambda-tagger"
+      FunctionName: "tagger-mng-lambda-tagger"
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
@@ -666,7 +666,7 @@ Resources:
               S3_BUCKET_MODULES : !Ref S3PluginBucket
               REGION: !Ref AWS::Region
 
-      FunctionName: "mtdt-mng-lambda-initdb"
+      FunctionName: "tagger-mng-lambda-initdb"
       Handler: "lambda_function.lambda_handler"
       Architectures: 
         - "x86_64"
@@ -688,7 +688,7 @@ Resources:
   LambdaLayer:
     Type: AWS::Lambda::LayerVersion
     Properties:
-      LayerName: "mtdt-mng-lambda-layer"
+      LayerName: "tagger-mng-lambda-layer"
       Description: psycopg2, boto3 libraries
       Content:
         S3Bucket: !Ref S3Artifacts
