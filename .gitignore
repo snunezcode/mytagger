@@ -4,8 +4,6 @@ frontend/build/
 frontend/public/aws-exports.json
 sync.sh
 response.json
-public.sh
-private.sh
 
 
 # Logs
