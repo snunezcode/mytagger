@@ -8,7 +8,6 @@ import {
   Text
 } from "@aws-amplify/ui-react";
 
-import Icon from "@cloudscape-design/components/icon";
 import { configuration } from '../pages/Configs';
 
 import { Navigate,useLocation } from "react-router-dom";
@@ -28,22 +27,12 @@ export default function Auth({children}) {
     };
 
 
-    function Header() {      
+    function Header() {
+      const { tokens } = useTheme();
         return (
-          <div>
-              <Flex justifyContent="center">            
-                
-                <Heading level={2}>
-                  <Icon
-                    name="lock-private"
-                    size="large"              
-                  />
-                  {configuration['apps-settings']['application-title']}                    
-                </Heading>           
-                
-              </Flex>
-              <br/>
-          </div>
+          <Flex justifyContent="left">
+            
+          </Flex>
         );
     }
     
@@ -64,7 +53,7 @@ export default function Auth({children}) {
       
         return (
           <Heading level={4} padding={`${tokens.space.xl} ${tokens.space.xl} 0`}>
-            Sign in 
+            Sign in to {configuration['apps-settings']['application-title']} Console
           </Heading>
         );
     }

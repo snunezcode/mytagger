@@ -13,7 +13,12 @@ import Box from "@cloudscape-design/components/box";
 import ColumnLayout from "@cloudscape-design/components/column-layout";
 import Badge from "@cloudscape-design/components/badge";
 import AppLayout from '@cloudscape-design/components/app-layout';
-import architecture from '../img/architecture.png'; 
+import SegmentedControl from "@cloudscape-design/components/segmented-control";
+import architecturePublic from '../img/architecture-public.png'; 
+import architecturePrivate from '../img/architecture-private.png'; 
+
+
+
 
 
 import '@aws-amplify/ui-react/styles.css';
@@ -23,7 +28,8 @@ function Home() {
   
   //-- Application version
   const [versionMessage, setVersionMessage] = useState([]);
-  
+  const [value, setValue] = useState("public");
+  const [selectedId, setSelectedId] = useState("public");
   
   //-- Call API to app version
    async function gatherVersion (){
@@ -189,7 +195,20 @@ function Home() {
                                         
                                       }
                                   >
-                                    <img style={{ "max-width" :"100%" }} src={architecture} alt="Architecture" />
+                                    <br/>
+                                    <SegmentedControl
+                                        selectedId={selectedId}
+                                        onChange={({ detail }) =>
+                                          setSelectedId(detail.selectedId)
+                                        }                                        
+                                        options={[
+                                          { text: "Public", id: "public" },
+                                          { text: "Private", id: "private" }                                          
+                                        ]}
+                                    />
+                                    <br/>                                    
+                                    <img style={{ "max-width" :"100%" }} src={ selectedId == "public" ? architecturePublic : architecturePrivate} alt="Architecture" />
+                                    
 
                               </Container>
                               

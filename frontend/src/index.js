@@ -24,10 +24,11 @@ import SmMetadataSearch01 from "./pages/Sm-metadata-search-01";
 import SmModules01 from "./pages/Sm-modules-01";
 import SmModules02 from "./pages/Sm-modules-02";
 
-
 //-- Components
 import ProtectedApp from "./components/ProtectedApp";
+import { AmplifyTheme } from './components/AmplifyTheme';
 import { applyMode,  Mode } from '@cloudscape-design/global-styles';
+
 if (localStorage.getItem("themeMode") === null ){
     localStorage.setItem("themeMode", "light");
 }
@@ -36,7 +37,7 @@ if (localStorage.getItem("themeMode") == "dark")
     applyMode(Mode.Dark);
 else
     applyMode(Mode.Light);
-    
+  
 
 
 Axios.get(`/aws-exports.json`,).then((data)=>{
@@ -53,7 +54,7 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
     const rootElement = document.getElementById("root");
     render(
       <StrictMode>
-        <AmplifyProvider>
+        <AmplifyProvider theme={AmplifyTheme}>
           <Authenticator.Provider>
               <BrowserRouter>
                 <Routes>

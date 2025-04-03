@@ -38,11 +38,10 @@ const profileActions = [
 
 
 export default function App() {
-  
+ 
   
   const handleClickMenu = ({detail}) => {
-            console.log(detail);
-            
+                        
             switch (detail.id) {
               
               case 'themeDark':

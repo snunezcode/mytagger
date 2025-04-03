@@ -8,7 +8,6 @@ import TextFilter from "@cloudscape-design/components/text-filter";
 import Table from "@cloudscape-design/components/table";
 import Header from "@cloudscape-design/components/header";
 import Button from "@cloudscape-design/components/button";
-import SpaceBetween from "@cloudscape-design/components/space-between";
 
                                                                 
 const TableComponent = memo(({columnsTable,visibleContent, dataset, title, description = "",onSelectionItem = () => {}, pageSize = 10, extendedTableProperties = {}, tableActions = null  }) => {
