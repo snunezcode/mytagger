@@ -9,7 +9,7 @@ export APP_USER="snmatus@amazon.com"
 export IPV4_CIDR="138.84.54.61/32"
 export IPV6_CIDR="2605:59c8:731d:4810:2cd8:d9a:59f4:888c/128"
 export GITHUB_REPO="https://github.com/snunezcode/mytagger.git"
-export WAF="false"
+export WAF="true"
 
 aws cloudformation create-stack \
   --stack-name "build-public-$IDENTIFIER" \

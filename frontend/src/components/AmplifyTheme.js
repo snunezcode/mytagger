@@ -25,7 +25,7 @@ export const AmplifyTheme = createTheme({
         secondary: { value: '#e5e7eb' }
       }
     },
-    components: {
+    components: {      
       button: {
         primary: {
           backgroundColor: { value: '{colors.brand.primary.80}' },
