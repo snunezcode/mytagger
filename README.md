@@ -22,6 +22,15 @@ Tagger Solution empowers organizations to optimize their AWS resources, improve 
 <img width="1089" alt="image" src="frontend/src/img/architecture-private.png">
 
 
+## How looks like ?
+
+
+<img width="1089" alt="image" src="img/img-01.png">
+<img width="1089" alt="image" src="img/img-02.png">
+<img width="1089" alt="image" src="img/img-04.png">
+<img width="1089" alt="image" src="img/img-08.png">
+
+
 ## Key features
 
 - Cross-account and cross-region automated tagging.
