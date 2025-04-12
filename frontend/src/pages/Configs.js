@@ -24,7 +24,7 @@ export const configuration =
 };
 
 
-export const SideMainLayoutHeader = { text: 'AWS Resource Groups', href: '/' };
+export const SideMainLayoutHeader = { text: 'Resource Groups', href: '/' };
 
 export const SideMainLayoutMenu = [
     {
@@ -41,6 +41,7 @@ export const SideMainLayoutMenu = [
         defaultExpanded: true,
         items: [
             { type: "link", text: "Dashboard", href: "/dashboard/" },
+            { type: "link", text: "Compliance", href: "/compliance/" },
             { type: "link", text: "Tag Editor", href: "/tagger/" }
         ],
       },
@@ -58,7 +59,7 @@ export const SideMainLayoutMenu = [
     {
           type: "link",
           text: "Documentation",
-          href: "https://github.com/aws-samples/map-tagger-solution/",
+          href: "https://github.com/aws-samples/sample-tagger/",
           external: true,
           externalIconAriaLabel: "Opens in a new tab"
     }
