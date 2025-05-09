@@ -6,7 +6,7 @@ export const configuration =
         "refresh-interval": 5*1000,      
         "api-url" : api["url"],          
         "release" : "0.1.0",
-        "application-title": "Tagger Solution",
+        "application-title": "Taggr Solution",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",
     },
     "colors": {
@@ -42,7 +42,7 @@ export const SideMainLayoutMenu = [
         items: [
             { type: "link", text: "Dashboard", href: "/dashboard/" },
             { type: "link", text: "Compliance", href: "/compliance/" },
-            { type: "link", text: "Tag Editor", href: "/tagger/" }
+            { type: "link", text: "Tagging process", href: "/tagger/" }
         ],
       },
     { type: "divider" },

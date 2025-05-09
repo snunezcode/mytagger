@@ -12,15 +12,26 @@ Parameters:
       Type: String
       Description: S3 Artifacts
   
-  DSQLCluster:
-      Type: String
-      Description: DSQLCluster
+  
 
-  DSQLClusterId:
-      Type: String
-      Description: DSQLClusterId
-  
-  
+Resources:
+
+
+######################################################################
+########
+########   -----------------          DSQL Cluster   -----------------
+########
+######################################################################
+
+
+
+  DSQLCluster:
+    Type: AWS::DSQL::Cluster
+    Properties:
+      DeletionProtectionEnabled: false
+      Tags: 
+        - Key: Name
+          Value: !Join [ "-", ["tagger", !Ref AWS::AccountId , !Select [3, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]]]
 
 
 ######################################################################
@@ -29,7 +40,8 @@ Parameters:
 ########
 ######################################################################
 
-Resources:
+
+
   IAMRoleCognito:
       Type: "AWS::IAM::Role"
       Properties:
@@ -296,8 +308,6 @@ Resources:
 
 
   ApiLambdaPermission:
-      DependsOn:
-        - "LambdaFunctionApi"
       Type: AWS::Lambda::Permission
       DependsOn: 
         - ApiGatewayRestApi
@@ -317,12 +327,13 @@ Resources:
               - ":"
               - !GetAtt ApiGatewayRestApi.RestApiId
               - "/*/POST/"
-              
-  IAMRoleLambdaApi:
+
+
+  IAMRoleLambdaGlobal:
       Type: "AWS::IAM::Role"
       Properties:
           Path: "/"
-          RoleName: "tagger-mng-iam-role-lambda-api"
+          RoleName: "IAMRootRoleTaggerSolution"
           AssumeRolePolicyDocument: !Sub |
                     {
                         "Version": "2012-10-17",
@@ -354,7 +365,12 @@ Resources:
                                 "logs:CreateLogStream",
                                 "logs:PutLogEvents"
                             ],
-                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-api:*",
+                             "Resource": [
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-discovery:*",
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-api:*",
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-tagger:*",
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-initdb:*"
+                            ],                            
                             "Effect": "Allow"
                         },                      
                         {                            
@@ -363,7 +379,7 @@ Resources:
                                 "dsql:DbConnectAdmin"
                             ],
                             "Resource": [
-                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
+                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLCluster}"
                             ]
                         },
                         {
@@ -372,18 +388,19 @@ Resources:
                                 "lambda:InvokeFunction"
                             ],
                             "Resource": [
-                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:tagger-mng-lambda-discovery"
-                            ]
-                        },
-                        {                            
-                            "Effect": "Allow",
-                            "Action": [
-                                "lambda:InvokeFunction"
-                            ],
-                            "Resource": [
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:tagger-mng-lambda-discovery",
                                 "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:tagger-mng-lambda-tagger"
                             ]
-                        },
+                        },   
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },                     
                         {
                             "Effect": "Allow",
                             "Action": [
@@ -400,164 +417,17 @@ Resources:
                 }    
             
 
-
-  IAMRoleLambdaDiscovery:
-      Type: "AWS::IAM::Role"
-      Properties:
-          Path: "/"
-          RoleName: "tagger-mng-iam-role-lambda-discovery"
-          AssumeRolePolicyDocument: !Sub |
-                    {
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "lambda.amazonaws.com"
-                                },
-                                "Action": "sts:AssumeRole"
-                            }
-                        ]
-                    }
-          Policies:
-          - PolicyName: "LambdaPolicy"
-            PolicyDocument: !Sub |
-                {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Action": "logs:CreateLogGroup",
-                            "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "logs:CreateLogStream",
-                                "logs:PutLogEvents"
-                            ],
-                            "Resource": [
-                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-discovery:*"
-                            ]
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "dsql:DbConnectAdmin"
-                            ],
-                            "Resource": [
-                                "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
-                            ]
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "sts:AssumeRole"
-                            ],
-                            "Resource": [
-                                "arn:aws:iam::${AWS::AccountId}:role/IAMRoleTaggerSolution"
-                            ]
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "s3:GetObject",
-                                "s3:ListBucket",
-                                "s3:PutObject"
-                            ],
-                            "Resource": [
-                                "arn:aws:s3:::${S3PluginBucket}",
-                                "arn:aws:s3:::${S3PluginBucket}/*"
-                            ]
-                        }
-                    ]
-                }           
-
-
-  IAMRoleLambdaTagger:
-      Type: "AWS::IAM::Role"
-      Properties:
-          Path: "/"
-          RoleName: "tagger-mng-iam-role-lambda-tagger"
-          AssumeRolePolicyDocument: !Sub |
-                    {
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "lambda.amazonaws.com"
-                                },
-                                "Action": "sts:AssumeRole"
-                            }
-                        ]
-                    }
-          Policies:
-          - PolicyName: "LambdaPolicy"
-            PolicyDocument: !Sub |              
-                   {
-                      "Version": "2012-10-17",
-                      "Statement": [
-                          {
-                              "Effect": "Allow",
-                              "Action": "logs:CreateLogGroup",
-                              "Resource": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
-                          },
-                          {
-                              "Effect": "Allow",
-                              "Action": [
-                                  "logs:CreateLogStream",
-                                  "logs:PutLogEvents"
-                              ],
-                              "Resource": [
-                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-tagger:*",
-                                  "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/tagger-mng-lambda-initdb:*"
-                              ]
-                          },
-                          {
-                              "Effect": "Allow",
-                              "Action": [
-                                  "sts:AssumeRole"
-                              ],
-                              "Resource": [                                                                    
-                                  "arn:aws:iam::${AWS::AccountId}:role/IAMRoleTaggerSolution"
-                              ]
-                          },
-                          {
-                              "Effect": "Allow",
-                              "Action": [
-                                  "dsql:DbConnectAdmin"
-                              ],
-                              "Resource": [
-                                  "arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DSQLClusterId}"
-                              ]
-                          },
-                          {
-                              "Effect": "Allow",
-                              "Action": [
-                                        "s3:GetObject",
-                                        "s3:ListBucket",
-                                        "s3:PutObject"
-                              ],
-                              "Resource": [
-                                  "arn:aws:s3:::${S3PluginBucket}",
-                                  "arn:aws:s3:::${S3PluginBucket}/*"
-                              ]
-                          }
-                      ]
-                    }
-
-
+  
   LambdaFunctionApi:
     Type: AWS::Lambda::Function
     Properties:        
       Environment: 
-          Variables:                          
-              DBHOST: !Ref DSQLCluster
+          Variables:                                        
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
-              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution              
+              IAM_SCAN_ROLE : !Ref IAMChildRoleTaggerSolution              
               LAMBDA_METADATA_DISCOVERY: !Ref LambdaFunctionDiscovery
               LAMBDA_METADATA_TAGGING: !Ref LambdaFunctionTagger
               MAX_WORKERS : "10"              
@@ -569,7 +439,7 @@ Resources:
       Architectures: 
         - "x86_64"
       MemorySize: 1024      
-      Role: !GetAtt IAMRoleLambdaApi.Arn
+      Role: !GetAtt IAMRoleLambdaGlobal.Arn
       Runtime: "python3.11"
       Timeout: 900
       TracingConfig: 
@@ -588,11 +458,11 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
-              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              IAM_SCAN_ROLE : !Ref IAMChildRoleTaggerSolution
               MAX_WORKERS : "10"
               S3_BUCKET_METADATA : !Ref S3PluginBucket
               S3_BUCKET_MODULES : !Ref S3PluginBucket
@@ -603,7 +473,7 @@ Resources:
       Architectures: 
         - "x86_64"
       MemorySize: 4096      
-      Role: !GetAtt IAMRoleLambdaDiscovery.Arn
+      Role: !GetAtt IAMRoleLambdaGlobal.Arn
       Runtime: "python3.11"
       Timeout: 900
       TracingConfig: 
@@ -622,11 +492,11 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
-              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              IAM_SCAN_ROLE : !Ref IAMChildRoleTaggerSolution
               MAX_WORKERS : "10"
               S3_BUCKET_METADATA : !Ref S3PluginBucket
               S3_BUCKET_MODULES : !Ref S3PluginBucket
@@ -637,7 +507,7 @@ Resources:
       Architectures: 
         - "x86_64"
       MemorySize: 4096      
-      Role: !GetAtt IAMRoleLambdaTagger.Arn
+      Role: !GetAtt IAMRoleLambdaGlobal.Arn
       Runtime: "python3.11"
       Timeout: 900
       TracingConfig: 
@@ -656,11 +526,11 @@ Resources:
     Properties:        
       Environment: 
           Variables:                          
-              DBHOST: !Ref DSQLCluster
+              DBHOST: !Join [ "", [!Ref DSQLCluster, ".dsql." ,!Ref AWS::Region, ".on.aws"]]
               DBNAME: "postgres"
               DBPORT: "5432"
               DBUSER: "admin"
-              IAM_SCAN_ROLE : !Ref IAMRoleTaggerSolution
+              IAM_SCAN_ROLE : !Ref IAMChildRoleTaggerSolution
               MAX_WORKERS : "10"
               S3_BUCKET_METADATA : !Ref S3PluginBucket
               S3_BUCKET_MODULES : !Ref S3PluginBucket
@@ -671,7 +541,7 @@ Resources:
       Architectures: 
         - "x86_64"
       MemorySize: 128      
-      Role: !GetAtt IAMRoleLambdaTagger.Arn
+      Role: !GetAtt IAMRoleLambdaGlobal.Arn
       Runtime: "python3.11"
       Timeout: 60
       TracingConfig: 
@@ -828,12 +698,12 @@ Resources:
                 ]
               }
               
-  IAMRoleTaggerSolution:
+  IAMChildRoleTaggerSolution:
       Type: "AWS::IAM::Role"
-      DependsOn: IAMRoleLambdaApi
+      DependsOn: IAMRoleLambdaGlobal
       Properties:
           Path: "/"
-          RoleName: "IAMRoleTaggerSolution"
+          RoleName: "IAMChildRoleTaggerSolution"
           AssumeRolePolicyDocument: !Sub |
               {
                   "Version": "2012-10-17",
@@ -841,24 +711,10 @@ Resources:
                       {
                           "Effect": "Allow",
                           "Principal": {
-                              "AWS": "${IAMRoleLambdaApi.Arn}"
+                              "AWS": "${IAMRoleLambdaGlobal.Arn}"
                           },
                           "Action": "sts:AssumeRole"
-                      },
-                      {
-                          "Effect": "Allow",
-                          "Principal": {
-                              "AWS": "${IAMRoleLambdaDiscovery.Arn}"
-                          },
-                          "Action": "sts:AssumeRole"
-                      },
-                      {
-                          "Effect": "Allow",
-                          "Principal": {
-                              "AWS": "${IAMRoleLambdaTagger.Arn}"
-                          },
-                          "Action": "sts:AssumeRole"
-                      }
+                      }                      
                   ]
               }
           MaxSessionDuration: 3600
@@ -890,9 +746,9 @@ Outputs:
         Description: Cognito User Pool
         Value: !GetAtt CognitoUserPoolClient.ClientId
     
-    IAMRoleTaggerSolution:
-        Description: IAMRoleTaggerSolution
-        Value: !GetAtt IAMRoleTaggerSolution.Arn
+    IAMRootRoleTaggerSolution:
+        Description: IAMRoleLambdaGlobal
+        Value: !GetAtt IAMRoleLambdaGlobal.Arn
 
     S3PluginBucket:
         Description: S3PluginBucket
